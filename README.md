@@ -1,7 +1,6 @@
-#####
-# README for the directory /millipede_spatial_undersampling/
-# 23 July 2021
-# Willson Gaul	willson.gaul@ucdconnect.ie
+# Millipede Spatial Undersampling
+## 23 July 2021
+## Willson Gaul	willson.gaul@ucdconnect.ie
 #####
 
 This repository contains code to run the analyses for a study of using spatial under-sampling to model distributions of Irish millipedes.  

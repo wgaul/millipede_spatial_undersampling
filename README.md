@@ -1,0 +1,15 @@
+#####
+# README for the directory /millipede_spatial_undersampling/
+# 23 July 2021
+# Willson Gaul	willson.gaul@ucdconnect.ie
+#####
+
+This repository contains code to run the analyses for a study of using spatial under-sampling to model distributions of Irish millipedes.  
+
+To run the entire work flow, run the script "main_millipede_maps.R".  
+
+The millipede occurrence data to use is downloadable from GBIF following the citation below.
+
+GBIF.org (27 February 2021) GBIF Occurrence Download https://doi.org
+/10.15468/dl.833k97
+

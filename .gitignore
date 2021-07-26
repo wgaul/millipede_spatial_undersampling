@@ -57,6 +57,7 @@ Thumbs.db
 *cache
 *.xml
 unknown_bird_dataset_examples.csv
+wg_README.txt
 /data/
 
 .Rproj.user

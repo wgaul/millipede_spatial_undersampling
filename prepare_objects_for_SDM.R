@@ -51,12 +51,14 @@ mill_wide <- mill_fewer_vars %>%
 #   "Genus_species")
 
 mill_wide <- SpatialPointsDataFrame(
-  coords = mill_wide[, c("eastings", "northings")], 
-  data = mill_wide, proj4string = CRS("+init=epsg:29903"))
+  coords = mill_wide[, c("decimalLongitude", "decimalLatitude")], 
+  data = mill_wide, proj4string = CRS("+init=epsg:4326"))
+# make sure millipede data is in same projection as predictor data
+mill_wide <- spTransform(mill_wide, raster::projection(pred_brick))
 
 if(analysis_resolution == 1000) {
   # get only checklists with spatial resolution of 1km or less
-  mill_wide <- mill_wide[mill_wide$Precision <= 1000, ]
+  mill_wide <- mill_wide[mill_wide$coordinateUncertaintyInMeters <= 1000, ]
 }
 
 if(make_spatial_blocks) {
@@ -77,7 +79,7 @@ if(make_spatial_blocks) {
           k = n_folds, 
           selection = "random", 
           iteration = 5, 
-          showBlocks = TRUE, 
+          showBlocks = FALSE, 
           xOffset = runif(n = 1, min = 0, max = 1), 
           yOffset = runif(n = 1, min = 0, max = 1),
           rasterLayer = pred_brick$pasture_l2, 

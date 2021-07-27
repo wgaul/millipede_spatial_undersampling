@@ -19,7 +19,7 @@ seed <- 23012020  # 23 Jan 2020
 
 
 run_rf <- T
-make_spatial_blocks <- T # takes a few minutes. Set to T for final run
+make_spatial_blocks <- F # takes a few minutes. Set to T for final run
 get_partial_dependence <- F # calculate partial dependence (time consuming)
 run_evals <- F
 

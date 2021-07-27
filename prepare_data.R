@@ -11,7 +11,7 @@
 mill <- read_tsv("./data/GBIF_27_Feb_2021_download/occurrence.txt")
 # remove unwanted columns
 mill <- mill[ , -c(2, 5:11, 13:15, 18:26, 28:36, 38:48, 51:54, 67, 72:79, 82:86,
-                   95, 107:108, 140:166, 212:215)]
+                   95, 104:105, 107:108, 140:166, 212:215)]
 
 hec_names <- read_csv("./data/Irish_land_hectads.csv")
 # hopefully make hectads line up with grid cells of predictor raster brick
@@ -126,6 +126,9 @@ mill <- mill[!is.na(mill$coordinateUncertaintyInMeters) &
 # keep only records from 1970 to present
 mill <- mill[mill$year >= 1970, ]
 mill <- mill[mill$taxonRank == "SPECIES", ]
+# # remove records without at least monthly temporal precision
+# mill <- mill[!is.na(mill$month), ]
+
 ## make checlist ID variable
 mill$checklist_ID <- paste0(mill$recordedBy, mill$eventDate, mill$locality, 
                             mill$decimalLatitude, mill$decimalLongitude)

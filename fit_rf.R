@@ -10,7 +10,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 23 Jan 2020
-## last modified: 21 June 2020
+## last modified: 27 July 2021
 ##############################
 
 on_sonic <- F
@@ -87,8 +87,9 @@ fit_rf <- function(test_fold, sp_name, sp_df, pred_names, newdata,
             type = "prob")[, "1"]}, 
     error = function(x) NA)
   # select columns to keep in df of predictions
-  preds <- sp_df_original[ , c("checklist_ID", "eastings", "northings", 
-                               "hectad", "folds", "test_fold", sp_name)]
+  preds <- sp_df_original[ , c("checklist_ID", "decimalLongitude", 
+                               "decimalLatitude", "folds", 
+                               "test_fold", sp_name)]
   preds$pred <- f_pred # add predictions to df
 
   # make dataframe of predictions with standardized recording effort
@@ -100,16 +101,17 @@ fit_rf <- function(test_fold, sp_name, sp_df, pred_names, newdata,
   
   # drop predictor variables from predictions dataframe 
   if(analysis_resolution == 10000) {
-    newdata <- select(newdata, hectad, eastings, northings, 
+    newdata <- select(newdata, hectad, decimalLongitude, decimalLatitude, 
                       day_of_year, pred)
   } else if(analysis_resolution == 1000) {
-    newdata <- select(newdata, eastings, northings, day_of_year, pred)
-    newdata$en <- paste0(round(newdata$eastings), "_", 
-                         round(newdata$northings))
+    newdata <- select(newdata, decimalLongitude, decimalLatitude, 
+                      day_of_year, pred)
+    newdata$en <- paste0(round(newdata$decimalLongitude), "_", 
+                         round(newdata$decimalLatitude))
     # summarise standardized predictions over the entire year
     newdata <- group_by(newdata, en) %>%
-      summarise(mean_pred = mean(pred), eastings = mean(eastings), 
-                northings = mean(northings))
+      summarise(mean_pred = mean(pred), decimalLongitude = mean(decimalLongitude), 
+                decimalLatitude = mean(decimalLatitude))
   } else stop("Analysis resolution must be either 10000 or 1000")
 
 
@@ -138,7 +140,7 @@ fit_rf <- function(test_fold, sp_name, sp_df, pred_names, newdata,
    
     ## calculate at spatial subsampling block scale (e.g. 30k X 30km)
     lst_spat <- SpatialPointsDataFrame(
-      coords = sp_df[, c("eastings", "northings")], 
+      coords = sp_df[, c("decimalLongitude", "decimalLatitude")], 
       data = sp_df, proj4string = CRS("+init=epsg:29903"))
     lst_spat <- lst_spat[ , "checklist_ID"] # make df of checklists
     blks <- spatialBlock(lst_spat, 
@@ -152,7 +154,7 @@ fit_rf <- function(test_fold, sp_name, sp_df, pred_names, newdata,
     # add spatial subsampling grid cell ID to each hectad
     all_hectads <- hec_names
     all_hectads <- SpatialPointsDataFrame(
-      coords = all_hectads[, c("eastings", "northings")], 
+      coords = all_hectads[, c("decimalLongitude", "decimalLatitude")], 
       data = all_hectads, proj4string = CRS("+init=epsg:29903"))
     all_hectads <- st_join(st_as_sf(all_hectads), 
                            st_as_sf(blks$blocks[, names(
@@ -343,7 +345,7 @@ if("spat_ll_rf" %in% mod_names) {
       sp_name = sp_name, 
       FUN = call_fit_rf, 
       sp_df = mill_wide, 
-      pred_names = c("eastings", "northings", 
+      pred_names = c("decimalLongitude", "decimalLatitude", 
                      "sin_doy", "cos_doy", "list_length"),
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 
@@ -367,7 +369,7 @@ if("spat_ll_rf" %in% mod_names) {
       sp_name = sp_name, 
       FUN = call_fit_rf, 
       sp_df = mill_wide, 
-      pred_names = c("eastings", "northings", 
+      pred_names = c("decimalLongitude", "decimalLatitude", 
                      "sin_doy", "cos_doy", "list_length"),
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 
@@ -446,7 +448,7 @@ if("env_spat_ll_rf" %in% mod_names) {
       FUN = call_fit_rf, 
       sp_df = mill_wide, 
       pred_names = c(sp_predictors[[which(names(sp_predictors) == sp_name)]],
-                     "eastings", "northings", 
+                     "decimalLongitude", "decimalLatitude", 
                      "sin_doy", "cos_doy", "list_length"),
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 
@@ -470,7 +472,7 @@ if("env_spat_ll_rf" %in% mod_names) {
       FUN = call_fit_rf, 
       sp_df = mill_wide, 
       pred_names = c(sp_predictors[[which(names(sp_predictors) == sp_name)]],
-                     "eastings", "northings", 
+                     "decimalLongitude", "decimalLatitude", 
                      "sin_doy", "cos_doy", "list_length"),
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 

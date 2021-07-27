@@ -22,7 +22,7 @@ library(sf)
 #                           -(Name_matched_TNRS:Accepted_name_lsid_TNRS), 
 #                           -ID, -cells) 
 mill_fewer_vars <- select(mill, occurrenceID, recordedBy, eventDate, 
-                          year, month, day, decimalLatitude, decimalLongitude,
+                          year, decimalLatitude, decimalLongitude,
                           coordinateUncertaintyInMeters, species, checklist_ID,
                           list_length, day_of_year, sin_doy, cos_doy, 
                           mean_tn:doy_csc)
@@ -147,8 +147,8 @@ if(analysis_resolution == 10000) {
     newdata_temp <- cbind(newdata_temp, 
                           data.frame(coordinates(mask(pred_brick, ir_TM75))))
     newdata_temp <- newdata_temp[complete.cases(newdata_temp), ]
-    colnames(newdata_temp)[colnames(newdata_temp) == "x"] <- "eastings"
-    colnames(newdata_temp)[colnames(newdata_temp) == "y"] <- "northings"
+    colnames(newdata_temp)[colnames(newdata_temp) == "x"] <- "decimalLongitude"
+    colnames(newdata_temp)[colnames(newdata_temp) == "y"] <- "decimalLatitude"
     rm(ir, ir_TM75)
   } else stop("Analysis resolution must be either 10000 or 1000 in order to created 'newdata' for predictions.")
 
@@ -163,7 +163,7 @@ newdata$cos_doy <- cos((2*pi*newdata$day_of_year) / 365)
 newdata$list_length <- 2 # median list length: median(mill_wide_df$list_length)
 
 newdata <- SpatialPointsDataFrame(
-  coords = newdata[, c("eastings", "northings")], 
+  coords = newdata[, c("decimalLongitude", "decimalLatitude")], 
   data = newdata, 
   proj4string = CRS("+init=epsg:29903"))
 
@@ -197,4 +197,4 @@ try(rm(agricultural_l1_rast, agricultural_l1_rast_1km, arable_land_l2_rast,
        soil_drainage_10km_brick, soil_drainage_1km_brick, soil_IFS_10km_brick, 
        soil_IFS_1km_brick, urban_fabric_l2_rast, urban_fabric_l2_rast_1km, 
        wetlands_l1_rast, wetlands_l1_rast_1km, krig_mean_rr_map, 
-       krig_mean_tn_map, krig_mean_tx_map))
+       krig_mean_tn_map, krig_mean_tx_map, summer_tx_hectad, winter_tn_hectad))

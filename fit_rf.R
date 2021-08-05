@@ -86,9 +86,10 @@ fit_rf <- function(test_fold, sp_name, sp_df, pred_names, newdata,
       colnames(sp_df_original) != "folds")], 
             type = "prob")[, "1"]}, 
     error = function(x) NA)
+
   # select columns to keep in df of predictions
   preds <- sp_df_original[ , c("checklist_ID", "decimalLongitude", 
-                               "decimalLatitude", "folds", 
+                               "decimalLatitude", "folds", "hectad", 
                                "test_fold", sp_name)]
   preds$pred <- f_pred # add predictions to df
 
@@ -98,19 +99,20 @@ fit_rf <- function(test_fold, sp_name, sp_df, pred_names, newdata,
     predict(mod, newdata = newdata[, which(colnames(newdata) != "folds")], 
             type = "prob")[, "1"]}, 
     error = function(x) NA)
-  
+
   # drop predictor variables from predictions dataframe 
   if(analysis_resolution == 10000) {
     newdata <- select(newdata, hectad, decimalLongitude, decimalLatitude, 
-                      day_of_year, pred)
+                      month, pred)
   } else if(analysis_resolution == 1000) {
     newdata <- select(newdata, decimalLongitude, decimalLatitude, 
-                      day_of_year, pred)
+                      month, pred)
     newdata$en <- paste0(round(newdata$decimalLongitude), "_", 
                          round(newdata$decimalLatitude))
     # summarise standardized predictions over the entire year
     newdata <- group_by(newdata, en) %>%
-      summarise(mean_pred = mean(pred), decimalLongitude = mean(decimalLongitude), 
+      summarise(mean_pred = mean(pred), 
+                decimalLongitude = mean(decimalLongitude), 
                 decimalLatitude = mean(decimalLatitude))
   } else stop("Analysis resolution must be either 10000 or 1000")
 
@@ -132,7 +134,7 @@ fit_rf <- function(test_fold, sp_name, sp_df, pred_names, newdata,
       table_nobs <- data.frame(table(sp_df$hectad))
       colnames(table_nobs) <- c("hectad", "nrec")
       # get all hectads (use newdata df to get names of all hectads)
-      all_hectads <- newdata[newdata$day_of_year == newdata$day_of_year[1], ]
+      all_hectads <- newdata[newdata$month == newdata$month[1], ]
       all_hectads <- left_join(all_hectads, table_nobs, by = "hectad")
       all_hectads$nrec[is.na(all_hectads$nrec)] <- 0
       simps_train_hec <- simpson_even(as.numeric(all_hectads$nrec))
@@ -277,7 +279,16 @@ call_fit_rf <- function(fold_assignments, sp_name, test_fold, sp_df,
       st_as_sf(fold_assignments$blocks[, names(fold_assignments$blocks) == 
                                          "folds"]))
   }
-  newdata <- data.frame(newdata)
+
+  # get lat/long coordinates for each newdata location
+  newdata <- spTransform(newdata, CRS("+init=epsg:4326"))
+  nd_coords <- data.frame(coordinates(newdata))
+  colnames(nd_coords)[colnames(nd_coords) == "eastings"] <- "decimalLongitude"
+  colnames(nd_coords)[colnames(nd_coords) == "northings"] <- "decimalLatitude"
+  newdata <- data.frame(newdata) # must be df (nob-spatial) for fit_rf()
+  newdata <- newdata[, colnames(newdata) %nin% c("eastings.1", "northings.1")]
+  newdata <- cbind(newdata, nd_coords)
+  rm(nd_coords)
   
   # fit RF
   lapply(1:n_folds, FUN = fit_rf, sp_name = sp_name, 
@@ -289,57 +300,57 @@ call_fit_rf <- function(fold_assignments, sp_name, test_fold, sp_df,
 
 
 #### Fit Random Forest -------------------------------------------------------
-if("day_ll_rf" %in% mod_names) {
-  ### fit Day of Year + List Length models ------------------------------------
+if("month_ll_rf" %in% mod_names) {
+  ### fit Month + List Length models ------------------------------------
   # train with raw data
   for(i in 1:length(sp_to_fit)) {
     sp_name <- names(sp_to_fit)[i]
-    day_ll_rf_fits <- mclapply(
+    month_ll_rf_fits <- mclapply(
       fold_assignments, 
       sp_name = sp_name, 
       FUN = call_fit_rf, 
       sp_df = mill_wide, 
-      pred_names = c("sin_doy", "cos_doy", "list_length"), 
+      pred_names = c("sin_month", "cos_month", "list_length"), 
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 
       pred_brick = pred_brick, newdata = newdata,
       spatial.under.sample = FALSE, 
       mtry = 1, 
       mc.cores = n_cores)
-    try(print(pryr::object_size(day_ll_rf_fits)))
-    try(saveRDS(day_ll_rf_fits, paste0("./saved_objects/", 
-                                       "day_ll_rf_noSubSamp_fits_", 
+    try(print(pryr::object_size(month_ll_rf_fits)))
+    try(saveRDS(month_ll_rf_fits, paste0("./saved_objects/", 
+                                       "month_ll_rf_noSubSamp_fits_", 
                                        gsub(" ", "_", sp_name), 
                                        analysis_resolution, ".rds")))
-    rm(day_ll_rf_fits)
+    rm(month_ll_rf_fits)
   }
   
   # train with spatially subsampled data
   for(i in 1:length(sp_to_fit)) {
     sp_name <- names(sp_to_fit)[i]
-    day_ll_rf_fits <- mclapply(
+    month_ll_rf_fits <- mclapply(
       fold_assignments, 
       sp_name = sp_name, 
       FUN = call_fit_rf, 
       sp_df = mill_wide, 
-      pred_names = c("sin_doy", "cos_doy", "list_length"), 
+      pred_names = c("sin_month", "cos_month", "list_length"), 
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 
       pred_brick = pred_brick, newdata = newdata,
       spatial.under.sample = TRUE, 
       mtry = 1,
       mc.cores = n_cores)
-    try(print(pryr::object_size(day_ll_rf_fits)))
-    try(saveRDS(day_ll_rf_fits, paste0("./saved_objects/", 
-                                       "day_ll_rf_SubSamp_fits_", 
+    try(print(pryr::object_size(month_ll_rf_fits)))
+    try(saveRDS(month_ll_rf_fits, paste0("./saved_objects/", 
+                                       "month_ll_rf_SubSamp_fits_", 
                                        gsub(" ", "_", sp_name),
                                        analysis_resolution, ".rds")))
-    rm(day_ll_rf_fits)
+    rm(month_ll_rf_fits)
   }
-} ### end Day of Year + List Length ------------------------------------------
+} ### end month of Year + List Length ------------------------------------------
 
 if("spat_ll_rf" %in% mod_names) {
-  ### fit Spatial + List Length + DOY models -----------------------------------
+  ### fit Spatial + List Length + month models --------------------------------
   # train with raw data
   for(i in 1:length(sp_to_fit)) {
     sp_name <- names(sp_to_fit)[i]
@@ -349,7 +360,7 @@ if("spat_ll_rf" %in% mod_names) {
       FUN = call_fit_rf, 
       sp_df = mill_wide, 
       pred_names = c("decimalLongitude", "decimalLatitude", 
-                     "sin_doy", "cos_doy", "list_length"),
+                     "sin_month", "cos_month", "list_length"),
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 
       pred_brick = pred_brick, newdata = newdata,
@@ -373,7 +384,7 @@ if("spat_ll_rf" %in% mod_names) {
       FUN = call_fit_rf, 
       sp_df = mill_wide, 
       pred_names = c("decimalLongitude", "decimalLatitude", 
-                     "sin_doy", "cos_doy", "list_length"),
+                     "sin_month", "cos_month", "list_length"),
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 
       pred_brick = pred_brick, newdata = newdata,
@@ -388,11 +399,11 @@ if("spat_ll_rf" %in% mod_names) {
                                      ".rds")))
     rm(spat_rf_fits)
   }
-} ### end spatial + List Length + DOY models ---------------------------------
+} ### end spatial + List Length + month models ---------------------------------
 
 
 if("env_ll_rf" %in% mod_names) {
-  ### fit environmental + LL + DOY model --------------------------------------
+  ### fit environmental + LL + month model ------------------------------------
   # train with raw data
   for(i in 1:length(sp_to_fit)) {
     sp_name <- names(sp_to_fit)[i]
@@ -402,7 +413,7 @@ if("env_ll_rf" %in% mod_names) {
       FUN = call_fit_rf, 
       sp_df = mill_wide, 
       pred_names = c(sp_predictors[[which(names(sp_predictors) == sp_name)]],
-                     "sin_doy", "cos_doy", "list_length"),
+                     "sin_month", "cos_month", "list_length"),
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 
       pred_brick = pred_brick, newdata = newdata,
@@ -425,7 +436,7 @@ if("env_ll_rf" %in% mod_names) {
       FUN = call_fit_rf, 
       sp_df = mill_wide, 
       pred_names = c(sp_predictors[[which(names(sp_predictors) == sp_name)]],
-                     "sin_doy", "cos_doy", "list_length"),
+                     "sin_month", "cos_month", "list_length"),
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 
       pred_brick = pred_brick, newdata = newdata,
@@ -438,10 +449,10 @@ if("env_ll_rf" %in% mod_names) {
                                     analysis_resolution, ".rds")))
     rm(env_rf_fits)
   }
-} ### end environmental + LL + DOY model --------------------------------------
+} ### end environmental + LL + month model ------------------------------------
 
 if("env_spat_ll_rf" %in% mod_names) {
-  ### fit environmental + lat + long + LL + DOY model -------------------------
+  ### fit environmental + lat + long + LL + month model -----------------------
   # train with raw data
   for(i in 1:length(sp_to_fit)) {
     sp_name <- names(sp_to_fit)[i]
@@ -452,7 +463,7 @@ if("env_spat_ll_rf" %in% mod_names) {
       sp_df = mill_wide, 
       pred_names = c(sp_predictors[[which(names(sp_predictors) == sp_name)]],
                      "decimalLongitude", "decimalLatitude", 
-                     "sin_doy", "cos_doy", "list_length"),
+                     "sin_month", "cos_month", "list_length"),
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 
       pred_brick = pred_brick, newdata = newdata,
@@ -476,7 +487,7 @@ if("env_spat_ll_rf" %in% mod_names) {
       sp_df = mill_wide, 
       pred_names = c(sp_predictors[[which(names(sp_predictors) == sp_name)]],
                      "decimalLongitude", "decimalLatitude", 
-                     "sin_doy", "cos_doy", "list_length"),
+                     "sin_month", "cos_month", "list_length"),
       block_subsamp = block_subsamp, 
       block_range_spat_undersamp = block_range_spat_undersamp, 
       pred_brick = pred_brick, newdata = newdata,
@@ -489,7 +500,7 @@ if("env_spat_ll_rf" %in% mod_names) {
                                     analysis_resolution, ".rds")))
     rm(env_rf_fits)
   }
-} ### end environmental + Lat + Lon + LL + DOY model --------------------------
+} ### end environmental + Lat + Lon + LL + month model ------------------------
 ### end fit random forest ----------------------------------------------------
 
 
@@ -580,26 +591,26 @@ for(mod_name in mod_names) {
           }
           pl <- bind_rows(pl)
          
-          # add partial dependence for day of year
+          # add partial dependence for month
           ## calculate partial dependence for that same mean_rr variable by hand
           # This is my best guess about how to do this based on eq. 53 from that 
           # Friedman (2001) article
           
-          # make day of year values to predict to
-          doy_vals <- seq(from = 1, to = 365, length.out = 50)
-          # create a vector to hold the mean prediction for each doy value
+          # make month values to predict to
+          month_vals <- seq(from = 1, to = 12)
+          # create a vector to hold the mean prediction for each month value
           dependence <- c() 
           
-          for(dv in 1:length(doy_vals)) {
+          for(dv in 1:length(month_vals)) {
             # copy the training data to use for getting predictions
             ndat <- data.frame(mill_wide) 
-            # fix day of year values to the value we are testing
-            ndat$day_of_year <- doy_vals[dv] 
-            # calculate sin and cos of day of year
-            ndat$sin_doy <- sin((2*pi*ndat$day_of_year) / 365) 
-            ndat$cos_doy <- cos((2*pi*ndat$day_of_year) / 365)
+            # fix month values to the value we are testing
+            ndat$month <- month_vals[dv] 
+            # calculate sin and cos of month
+            ndat$sin_month <- sin((2*pi*ndat$month) / 12) 
+            ndat$cos_month <- cos((2*pi*ndat$month) / 12)
             # get predicted values for each case in the training data but 
-            # with the day of year (and cos_doy and sin_doy) values fixed to 
+            # with the month (and cos_month and sin_month) values fixed to 
             # the value that we are testing
             probs <- as.numeric(as.character(predict(mod, newdata = ndat, 
                                                      type = "prob")[, "1"]))
@@ -614,13 +625,13 @@ for(mod_name in mod_names) {
               ((mean(log(probs)) + mean(log(1-probs)))/2)
           }
           
-          # add dependence for DOY to df with other dependences
-          pd_doy <- data.frame(
-            x = doy_vals, y = dependence, 
-            variable = "day_of_year", species = sp_name, 
+          # add dependence for month to df with other dependences
+          pd_month <- data.frame(
+            x = month_vals, y = dependence, 
+            variable = "month", species = sp_name, 
             model = mod_name, train_data = "raw", 
             cv = as.character(fits[[fi]][[xi]]$block_cv_range))
-          pl <- bind_rows(pl, pd_doy)
+          pl <- bind_rows(pl, pd_month)
           
           # put partial dependence df in list
           fits_pd[[xi]] <- pl
@@ -720,26 +731,26 @@ for(mod_name in mod_names) {
           }
           pl <- bind_rows(pl)
           
-          # add partial dependence for day of year
+          # add partial dependence for month
           ## calculate partial dependence for that same mean_rr variable by hand
           # This is my best guess about how to do this based on eq. 53 from that
           # Friedman (2001) article
           
-          # make day of year values to predict to
-          doy_vals <- seq(from = 1, to = 365, length.out = 50)
-          # create a vector to hold the mean prediction for each doy value
+          # make month values to predict to
+          month_vals <- seq(from = 1, to = 12)
+          # create a vector to hold the mean prediction for each month value
           dependence <- c() 
           
-          for(dv in 1:length(doy_vals)) {
+          for(dv in 1:length(month_vals)) {
             # copy the training data to use for getting predictions
             ndat <- data.frame(mill_wide) 
-            # fix day of year values to the value we are testing
-            ndat$day_of_year <- doy_vals[dv] 
-            # calculate sin and cos of day of year
-            ndat$sin_doy <- sin((2*pi*ndat$day_of_year) / 365) 
-            ndat$cos_doy <- cos((2*pi*ndat$day_of_year) / 365)
+            # fix month values to the value we are testing
+            ndat$month <- month_vals[dv] 
+            # calculate sin and cos of month
+            ndat$sin_month <- sin((2*pi*ndat$month) / 12) 
+            ndat$cos_month <- cos((2*pi*ndat$month) / 12)
             # get predicted values for each case in the training data but 
-            # with the day of year (and cos_doy and sin_doy) values fixed 
+            # with the month (and cos_month and sin_month) values fixed 
             # to the value that we are testing
             probs <- as.numeric(as.character(predict(mod, newdata = ndat, 
                                                      type = "prob")[, "1"]))
@@ -754,13 +765,13 @@ for(mod_name in mod_names) {
               ((mean(log(probs)) + mean(log(1-probs)))/2)
           }
           
-          # add dependence for DOY to df with other dependences
-          pd_doy <- data.frame(
-            x = doy_vals, y = dependence, 
-            variable = "day_of_year", species = sp_name, 
+          # add dependence for month to df with other dependences
+          pd_month <- data.frame(
+            x = month_vals, y = dependence, 
+            variable = "month", species = sp_name, 
             model = mod_name, train_data = "spat_subsamp", 
             cv = as.character(fits[[fi]][[xi]]$block_cv_range))
-          pl <- bind_rows(pl, pd_doy)
+          pl <- bind_rows(pl, pd_month)
           
           fits_pd[[xi]] <- pl
         }

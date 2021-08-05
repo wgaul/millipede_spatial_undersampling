@@ -9,7 +9,7 @@
 ## 
 ## author: Willson Gaul wgaul@hotmail.com
 ## created: 25 Oct 2019
-## last modified: 23 July 2021
+## last modified: 5 Aug 2021
 #################################
 
 rm(list = ls())
@@ -21,7 +21,7 @@ seed <- 23012020  # 23 Jan 2020
 run_rf <- T
 make_spatial_blocks <- T # takes a few minutes. Set to T for final run
 get_partial_dependence <- F # calculate partial dependence (time consuming)
-run_evals <- F
+run_evals <- T
 
 analysis_resolution <- 1000 # analysis resolution (10000 or 1000 m rid squares)
 n_folds <- 3 # number of cross-validation folds to use
@@ -55,10 +55,10 @@ source("functions_maps_of_ignorance.R")
 n_cores <- 1
 
 # select species to fit models to
-# sp_to_fit <- list("Macrosternodesmus palicola", "Boreoiulus tenuis", 
-#                   "Ommatoiulus sabulosus", "Blaniulus guttulatus", 
-#                   "Glomeris marginata", "Cylindroiulus punctatus")
-sp_to_fit <- "Macrosternodesmus palicola"
+sp_to_fit <- list("Macrosternodesmus palicola", "Boreoiulus tenuis",
+                  "Ommatoiulus sabulosus", "Blaniulus guttulatus",
+                  "Glomeris marginata", "Cylindroiulus punctatus")
+# sp_to_fit <- "Macrosternodesmus palicola"
 names(sp_to_fit) <- sp_to_fit
 
 # define environmental predictors for each species
@@ -84,7 +84,8 @@ sp_predictors <- list(
 source("prepare_data.R")
 source("prepare_objects_for_SDM.R")
 # mod_names <- c("env_spat_ll_rf")
-mod_names <- c("day_ll_rf", "spat_ll_rf", "env_ll_rf", "env_spat_ll_rf")
+# mod_names <- c("month_ll_rf")
+mod_names <- c("month_ll_rf", "spat_ll_rf", "env_ll_rf", "env_spat_ll_rf")
 mods_for_pd_plots <- c("env_spat_ll_rf")
 
 if(run_rf) source("fit_rf.R")

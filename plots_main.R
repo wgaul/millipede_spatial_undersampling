@@ -9,7 +9,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 13 May 2020
-## last modified: 8 Dec 2020
+## last modified: 5 Aug 2021
 ##############################
 library(patchwork)
 try(rm(block_subsamp, fold_assignments, hec_names_spat, mill_fewer_vars, 
@@ -70,8 +70,10 @@ absences <- absences[keep_ab_rows, ]
 # combine spatially sub-sampled non-detection data with all detection data
 ex_osab <- bind_rows(absences, presences)
 ex_osab <- SpatialPointsDataFrame(
-  coords = ex_osab[, c("eastings", "northings")], 
-  data = ex_osab, proj4string = CRS("+init=epsg:29903"))
+  coords = ex_osab[, c("decimalLongitude", "decimalLatitude")], 
+  data = ex_osab, proj4string = CRS("+init=epsg:4326"))
+# make sure ex_osab is in same projection as predictor data
+ex_osab <- spTransform(ex_osab, raster::projection(pred_brick))
 
 map_Osab_raw <- ggplot() + 
   geom_sf(data = st_as_sf(ir_TM75), fill = NA) + 
@@ -115,7 +117,7 @@ auc_all_models_plot <- ggplot(
     y = value, 
     color = factor(
       model, 
-      levels = c("day_ll_rf", "spat_ll_rf","env_ll_rf", 
+      levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf", 
                  "env_spat_ll_rf"), 
       labels = c("\nseason +\nlist length\n", 
                  "\ncoordinates +\nseason +\nlist length\n",

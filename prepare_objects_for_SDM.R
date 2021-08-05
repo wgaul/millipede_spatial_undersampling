@@ -10,7 +10,7 @@
 ## 
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 24 Jan 2020
-## last modified: 29 July 2020
+## last modified: 5 Aug 2020
 ##############################
 library(blockCV)
 library(sf)
@@ -24,7 +24,8 @@ library(sf)
 mill_fewer_vars <- select(mill, occurrenceID, recordedBy, eventDate, 
                           year, decimalLatitude, decimalLongitude,
                           coordinateUncertaintyInMeters, species, checklist_ID,
-                          hectad, list_length, day_of_year, sin_doy, cos_doy, 
+                          hectad, list_length, day_of_year, month, 
+                          sin_doy, cos_doy,sin_month, cos_month, 
                           mean_tn:doy_csc)
 # rename species column to match name used in later code
 colnames(mill_fewer_vars)[colnames(mill_fewer_vars) == "species"] <- 
@@ -147,23 +148,24 @@ if(analysis_resolution == 10000) {
     newdata_temp <- cbind(newdata_temp, 
                           data.frame(coordinates(mask(pred_brick, ir_TM75))))
     newdata_temp <- newdata_temp[complete.cases(newdata_temp), ]
-    colnames(newdata_temp)[colnames(newdata_temp) == "x"] <- "decimalLongitude"
-    colnames(newdata_temp)[colnames(newdata_temp) == "y"] <- "decimalLatitude"
+    colnames(newdata_temp)[colnames(newdata_temp) == "x"] <- "eastings"
+    colnames(newdata_temp)[colnames(newdata_temp) == "y"] <- "northings"
     rm(ir, ir_TM75)
   } else stop("Analysis resolution must be either 10000 or 1000 in order to created 'newdata' for predictions.")
 
 newdata <- data.frame()
-for(i in 1:18) { # get predictions for every 20 days throught year
+for(i in 1:12) { # get predictions for every month of the year
   dt <- newdata_temp
-  dt$day_of_year <- i*20
+  dt$month <- i
   newdata <- bind_rows(newdata, dt)
 }
-newdata$sin_doy <- sin((2*pi*newdata$day_of_year) / 365)
-newdata$cos_doy <- cos((2*pi*newdata$day_of_year) / 365)
-newdata$list_length <- 2 # median list length: median(mill_wide_df$list_length)
+
+newdata$sin_month <- sin((2*pi*newdata$month) / 12)
+newdata$cos_month <- cos((2*pi*newdata$month) / 12)
+newdata$list_length <- 2 # median list length: median(mill_wide$list_length)
 
 newdata <- SpatialPointsDataFrame(
-  coords = newdata[, c("decimalLongitude", "decimalLatitude")], 
+  coords = newdata[, c("eastings", "northings")], 
   data = newdata, 
   proj4string = CRS("+init=epsg:29903"))
 

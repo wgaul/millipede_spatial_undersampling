@@ -3,7 +3,7 @@
 ## 
 ## author: Willson Gaul wgaul@hotmail.com
 ## created: 25 Oct 2019
-## last modified: 29 July 2021
+## last modified: 5 Aug 2021
 ##############################
 
 ### load millipede data
@@ -143,9 +143,7 @@ mill <- mill[!is.na(mill$coordinateUncertaintyInMeters) &
 # keep only records from 1970 to present
 mill <- mill[mill$year >= 1970, ]
 mill <- mill[mill$taxonRank == "SPECIES", ]
-# About a third of records are at monthly temporal precision, but that will 
-# be ok I think.  
-warning("Make day_of_year into month_of_year instead?")
+# About a third of records are at monthly temporal precision.
 
 ## make checlist ID variable
 mill$checklist_ID <- paste0(mill$recordedBy, mill$eventDate, mill$locality, 
@@ -158,10 +156,13 @@ for(i in 1:length(unique(mill$checklist_ID))) {
   mill$list_length[mill$checklist_ID == id] <- ll
 }
 
-## make Julian day and year variables
+## make Julian day, month and year variables
 mill$day_of_year <- yday(mill$eventDate)
+mill$month <- month(mill$eventDate)
 mill$sin_doy <- sin((2*pi*mill$day_of_year) / 365)
 mill$cos_doy <- cos((2*pi*mill$day_of_year) / 365)
+mill$sin_month <- sin((2*pi*mill$month) / 12)
+mill$cos_month <- cos((2*pi*mill$month) / 12)
 # mill$temp_resolution <- mill$EndDate - mill$StartDate # can't do this w/GBIF data
 
 # join predictor variables to millipede data
@@ -192,8 +193,11 @@ mill$northings_csc <- mill$northings_csc/spat_sd_northings
 
 mill$year_csc <- mill$year - mean(mill$year)
 mill$year_csc <- mill$year_csc/sd(mill$year_csc)
+mill$month_csc <- mill$month - median(mill$month)
+mill$month_csc <- mill$month_csc/sd(mill$month_csc)
 mill$doy_csc <- mill$day_of_year - 182.5 # center day of year
 mill$doy_csc <- mill$doy_csc/sd(mill$doy_csc)
+
 
 # # I think 10 km in space is about as big as a year and as big as about 8 julian
 # # days when all variables are scaled:

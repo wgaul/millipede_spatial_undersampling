@@ -3,7 +3,7 @@
 ## 
 ## author: Willson Gaul wgaul@hotmail.com
 ## created: 25 Oct 2019
-## last modified: 26 July 2021
+## last modified: 29 July 2021
 ##############################
 
 ### load millipede data
@@ -14,9 +14,26 @@ mill <- mill[ , -c(2, 5:11, 13:15, 18:26, 28:36, 38:48, 51:54, 67, 72:79, 82:86,
                    95, 104:105, 107:108, 140:166, 212:215)]
 
 hec_names <- read_csv("./data/Irish_land_hectads.csv")
-# hopefully make hectads line up with grid cells of predictor raster brick
-# hec_names$eastings = hec_names$eastings - 4900 
-# hec_names$northings = hec_names$northings - 4900
+options("scipen"=100, "digits"=4) # make sure R doesn't use scientific notation
+hec_names$en <- paste(hec_names$eastings, hec_names$northings, sep = "_")
+# put hectad names onto mill data frame (for use calculating spatial evenness 
+# of training data)
+mill_en <- lat_lon_to_osi(
+  mill, lat = "decimalLatitude", lon = "decimalLongitude", 
+  orig_crs = "+init=epsg:4326", 
+  precision = 10000)[, c(ncol(mill)+1, ncol(mill)+2)]
+# add 5000 meters to make coordinates match hec_names (which seems to mark the
+# middle of hectads)
+mill_en <- mill_en + 5000
+mill_en$en <- paste(mill_en$decimalLongitude.1, 
+                    mill_en$decimalLatitude.1, 
+                     sep = "_")
+mill_en <- left_join(mill_en, hec_names, by = "en")
+options("scipen"=0, "digits"=7) # restore defaults
+
+# add hectad column to mill
+mill$hectad <- mill_en$hectad
+rm(mill_en)
 
 # Load Ireland coastline
 ir <- readOGR(dsn='./data/', layer='ireland_coastline')
@@ -126,8 +143,9 @@ mill <- mill[!is.na(mill$coordinateUncertaintyInMeters) &
 # keep only records from 1970 to present
 mill <- mill[mill$year >= 1970, ]
 mill <- mill[mill$taxonRank == "SPECIES", ]
-# # remove records without at least monthly temporal precision
-# mill <- mill[!is.na(mill$month), ]
+# About a third of records are at monthly temporal precision, but that will 
+# be ok I think.  
+warning("Make day_of_year into month_of_year instead?")
 
 ## make checlist ID variable
 mill$checklist_ID <- paste0(mill$recordedBy, mill$eventDate, mill$locality, 

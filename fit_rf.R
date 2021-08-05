@@ -10,7 +10,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 23 Jan 2020
-## last modified: 27 July 2021
+## last modified: 29 July 2021
 ##############################
 
 on_sonic <- F
@@ -49,7 +49,7 @@ fit_rf <- function(test_fold, sp_name, sp_df, pred_names, newdata,
   }
   sp_name <- gsub(" ", ".", sp_name)
   colnames(sp_df) <- gsub(" ", ".", colnames(sp_df))
- 
+
   # label which observations are in the test fold
   sp_df$test_fold <- sp_df$folds == test_fold
   sp_df_original$test_fold <- sp_df_original$folds == test_fold
@@ -121,7 +121,7 @@ fit_rf <- function(test_fold, sp_name, sp_df, pred_names, newdata,
     length(which(sp_df[sp_df$folds != test_fold, 
                                   which(colnames(sp_df) == sp_name)] != 0)) / 
     nrow(sp_df)}, error = function (x) NA)
-  
+ 
   ## calculate Simpson's evenness for training and test datasets
   # Only calculate this for fold # 1.  The same dataset is used in multiple 
   # folds, so the value will be identical for all folds using that dataset.
@@ -137,11 +137,14 @@ fit_rf <- function(test_fold, sp_name, sp_df, pred_names, newdata,
       all_hectads$nrec[is.na(all_hectads$nrec)] <- 0
       simps_train_hec <- simpson_even(as.numeric(all_hectads$nrec))
     } else simps_train_hec <- NA
-   
+ 
     ## calculate at spatial subsampling block scale (e.g. 30k X 30km)
     lst_spat <- SpatialPointsDataFrame(
       coords = sp_df[, c("decimalLongitude", "decimalLatitude")], 
-      data = sp_df, proj4string = CRS("+init=epsg:29903"))
+      data = sp_df, proj4string = CRS("+init=epsg:4326"))
+    # make sure millipede data is in same projection as predictor data
+    lst_spat <- spTransform(lst_spat, raster::projection(pred_brick))
+ 
     lst_spat <- lst_spat[ , "checklist_ID"] # make df of checklists
     blks <- spatialBlock(lst_spat, 
                          theRange = block_range_spat_undersamp,
@@ -154,7 +157,7 @@ fit_rf <- function(test_fold, sp_name, sp_df, pred_names, newdata,
     # add spatial subsampling grid cell ID to each hectad
     all_hectads <- hec_names
     all_hectads <- SpatialPointsDataFrame(
-      coords = all_hectads[, c("decimalLongitude", "decimalLatitude")], 
+      coords = all_hectads[, c("eastings", "northings")], 
       data = all_hectads, proj4string = CRS("+init=epsg:29903"))
     all_hectads <- st_join(st_as_sf(all_hectads), 
                            st_as_sf(blks$blocks[, names(

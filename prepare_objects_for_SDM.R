@@ -10,7 +10,7 @@
 ## 
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 24 Jan 2020
-## last modified: 27 July 2020
+## last modified: 29 July 2020
 ##############################
 library(blockCV)
 library(sf)
@@ -24,7 +24,7 @@ library(sf)
 mill_fewer_vars <- select(mill, occurrenceID, recordedBy, eventDate, 
                           year, decimalLatitude, decimalLongitude,
                           coordinateUncertaintyInMeters, species, checklist_ID,
-                          list_length, day_of_year, sin_doy, cos_doy, 
+                          hectad, list_length, day_of_year, sin_doy, cos_doy, 
                           mean_tn:doy_csc)
 # rename species column to match name used in later code
 colnames(mill_fewer_vars)[colnames(mill_fewer_vars) == "species"] <- 

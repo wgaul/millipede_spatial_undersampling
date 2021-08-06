@@ -3,7 +3,7 @@
 ## 
 ## author: Willson Gaul wgaul@hotmail.com
 ## created: 25 Oct 2019
-## last modified: 5 Aug 2021
+## last modified: 6 Aug 2021
 ##############################
 
 ### load millipede data
@@ -34,6 +34,15 @@ options("scipen"=0, "digits"=7) # restore defaults
 # add hectad column to mill
 mill$hectad <- mill_en$hectad
 rm(mill_en)
+
+## add en for 1 km grid squares to mill data frame
+mill_en <- lat_lon_to_osi(
+  mill, lat = "decimalLatitude", lon = "decimalLongitude", 
+  orig_crs = "+init=epsg:4326", 
+  precision = 1000)[, c(ncol(mill)+1, ncol(mill)+2)]
+colnames(mill_en) <- c("eastings", "northings")
+mill <- cbind(data.frame(mill), data.frame(mill_en))
+options("scipen"=0, "digits"=7) # restore defaults
 
 # Load Ireland coastline
 ir <- readOGR(dsn='./data/', layer='ireland_coastline')
@@ -167,10 +176,10 @@ mill$cos_month <- cos((2*pi*mill$month) / 12)
 
 # join predictor variables to millipede data
 # make millipede data spatial 
-mill_spat <- SpatialPointsDataFrame(coords = mill[, c("decimalLongitude", 
-                                                      "decimalLatitude")], 
+mill_spat <- SpatialPointsDataFrame(coords = mill[, c("eastings", 
+                                                      "northings")], 
                                     data = mill, 
-                                    proj4string = CRS("+init=epsg:4326"))
+                                    proj4string = CRS("+init=epsg:29903"))
 # make sure millipede data is in same projection as predictor data
 mill_spat <- spTransform(mill_spat, raster::projection(pred_brick))
 
@@ -182,10 +191,10 @@ mill <- cbind(mill, pred_df)
 ## scale years, day of year, and spatial coordinate dimensions
 # eastings and northings should be scaled in the same way so space isn't more
 # important in one direction
-east_mean <- mean(mill$decimalLongitude)
-north_mean <- mean(mill$decimalLatitude)
-mill$eastings_csc <- mill$decimalLongitude - east_mean
-mill$northings_csc <- mill$decimalLatitude - north_mean
+east_mean <- mean(mill$eastings)
+north_mean <- mean(mill$northings)
+mill$eastings_csc <- mill$eastings - east_mean
+mill$northings_csc <- mill$northings - north_mean
 spat_sd_eastings <- sd(mill$eastings_csc)
 spat_sd_northings <- sd(mill$northings_csc)
 mill$eastings_csc <- mill$eastings_csc/spat_sd_eastings

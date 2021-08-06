@@ -10,7 +10,7 @@
 ## 
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 24 Jan 2020
-## last modified: 5 Aug 2020
+## last modified: 6 Aug 2020
 ##############################
 library(blockCV)
 library(sf)
@@ -23,6 +23,7 @@ library(sf)
 #                           -ID, -cells) 
 mill_fewer_vars <- select(mill, occurrenceID, recordedBy, eventDate, 
                           year, decimalLatitude, decimalLongitude,
+                          eastings, northings,
                           coordinateUncertaintyInMeters, species, checklist_ID,
                           hectad, list_length, day_of_year, month, 
                           sin_doy, cos_doy,sin_month, cos_month, 
@@ -52,8 +53,8 @@ mill_wide <- mill_fewer_vars %>%
 #   "Genus_species")
 
 mill_wide <- SpatialPointsDataFrame(
-  coords = mill_wide[, c("decimalLongitude", "decimalLatitude")], 
-  data = mill_wide, proj4string = CRS("+init=epsg:4326"))
+  coords = mill_wide[, c("eastings", "northings")], 
+  data = mill_wide, proj4string = CRS("+init=epsg:29903"))
 # make sure millipede data is in same projection as predictor data
 mill_wide <- spTransform(mill_wide, raster::projection(pred_brick))
 

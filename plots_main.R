@@ -450,20 +450,12 @@ osab_ciWidth_data <- lapply(osab_preds, function(dat) {
   dat <- group_by(dat, en) %>%
     summarise(mean_prediction = mean(mean_pred, na.rm = T), 
               se = se(mean_pred), 
-              decimalLongitude = mean(decimalLongitude), 
-              decimalLatitude = mean(decimalLatitude))
+              eastings = mean(eastings), 
+              northings = mean(northings))
   dat
 })
 
 osab_maps_ciWidth <- lapply(osab_ciWidth_data, function(dat, annot, ir_TM75) {
-  dat <- SpatialPointsDataFrame(
-    coords = dat[, c("decimalLongitude", "decimalLatitude")], 
-    data = dat, proj4string = CRS("+init=epsg:4326"))
-  dat <- spTransform(dat, CRS("+init=epsg:29903"))
-  dat_coords <- data.frame(coordinates(dat))
-  colnames(dat_coords) <- c("eastings", "northings")
-  dat <- cbind(data.frame(dat), data.frame(dat_coords))
-  rm(dat_coords)
   # make sure millipede data is in same projection as predictor data
   mill_wide <- spTransform(mill_wide, raster::projection(pred_brick))
   # map standard error of mean
@@ -488,7 +480,7 @@ osab_maps_prediction <- lapply(
     ggplot() + 
       geom_sf(data = st_as_sf(ir_TM75), fill = NA) + 
       geom_tile(data = dat, 
-                aes(x = decimalLongitude, y = decimalLatitude, 
+                aes(x = eastings, y = northings, 
                     fill = mean_prediction)) +
       ylab("") + xlab("") + 
       guides(fill = guide_colorbar(title = "", 
@@ -561,7 +553,7 @@ length(which(mill_wide$list_length == 2)) / nrow(mill_wide)
 
 # Number of detections per species when using 1 km resolution
 n_detections_per_species_1km <- data.frame(
-  table(mill$Genus_species[mill$Precision <= 1000]))
+  table(mill$species[mill$coordinateUncertaintyInMeters <= 1000]))
 n_detections_per_species_1km <- n_detections_per_species_1km[order(
   n_detections_per_species_1km$Freq, decreasing = FALSE), ]
 colnames(n_detections_per_species_1km) <- c("species", "number_of_detections")
@@ -574,13 +566,13 @@ n_detections_per_species_1km$proportion_detections <- round(
 n_detections_per_species_1km
 
 # some AUC summary stats
-auc_summary[auc_summary$model == "day_ll_rf", 1:4]
+auc_summary[auc_summary$model == "month_ll_rf", 1:4]
 auc_summary[auc_summary$model == "env_spat_ll_rf", 1:4]
-summary(auc_summary$spat_subsamp[auc_summary$model == "day_ll_rf"])
+summary(auc_summary$spat_subsamp[auc_summary$model == "month_ll_rf"])
 summary(auc_summary$spat_subsamp[auc_summary$model == "env_spat_ll_rf"])
 
 # difference between simplest and most complex model for each sp
-summary(auc_summary$spat_subsamp[auc_summary$model == "day_ll_rf"] - 
+summary(auc_summary$spat_subsamp[auc_summary$model == "month_ll_rf"] - 
   auc_summary$spat_subsamp[auc_summary$model == "env_spat_ll_rf"])
 
 auc_summary[auc_summary$species == "Cylindroiulus punctatus", 1:4]

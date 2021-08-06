@@ -18,10 +18,10 @@ calc_1k_distances <- F # run distances for 1km grid (might take a long time)
 seed <- 23012020  # 23 Jan 2020
 
 
-run_rf <- T
-make_spatial_blocks <- T # takes a few minutes. Set to T for final run
+run_rf <- F
+make_spatial_blocks <- F # takes a few minutes. Set to T for final run
 get_partial_dependence <- F # calculate partial dependence (time consuming)
-run_evals <- T
+run_evals <- F
 
 analysis_resolution <- 1000 # analysis resolution (10000 or 1000 m rid squares)
 n_folds <- 3 # number of cross-validation folds to use

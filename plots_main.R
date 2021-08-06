@@ -9,7 +9,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 13 May 2020
-## last modified: 5 Aug 2021
+## last modified: 6 Aug 2021
 ##############################
 library(patchwork)
 try(rm(block_subsamp, fold_assignments, hec_names_spat, mill_fewer_vars, 
@@ -206,7 +206,7 @@ auc_means_plot <- ggplot(
     y = change_after_subsampling, 
     color = factor(
       model, 
-      levels = c("day_ll_rf", "spat_ll_rf","env_ll_rf", 
+      levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf", 
                  "env_spat_ll_rf"), 
       labels = c("\nseason +\nlist length\n", 
                  "\ncoordinates +\nseason +\nlist length\n",
@@ -214,7 +214,7 @@ auc_means_plot <- ggplot(
                  "\nenvironment + \ncoordinates +\nseason +\nlist length")), 
     shape = factor(
       model, 
-      levels = c("day_ll_rf", "spat_ll_rf","env_ll_rf", 
+      levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf", 
                  "env_spat_ll_rf"), 
       labels = c("\nseason +\nlist length\n", 
                  "\ncoordinates +\nseason +\nlist length\n",
@@ -450,14 +450,26 @@ osab_ciWidth_data <- lapply(osab_preds, function(dat) {
   dat <- group_by(dat, en) %>%
     summarise(mean_prediction = mean(mean_pred, na.rm = T), 
               se = se(mean_pred), 
-              eastings = mean(eastings), northings = mean(northings))
+              decimalLongitude = mean(decimalLongitude), 
+              decimalLatitude = mean(decimalLatitude))
   dat
 })
 
 osab_maps_ciWidth <- lapply(osab_ciWidth_data, function(dat, annot, ir_TM75) {
+  dat <- SpatialPointsDataFrame(
+    coords = dat[, c("decimalLongitude", "decimalLatitude")], 
+    data = dat, proj4string = CRS("+init=epsg:4326"))
+  dat <- spTransform(dat, CRS("+init=epsg:29903"))
+  dat_coords <- data.frame(coordinates(dat))
+  colnames(dat_coords) <- c("eastings", "northings")
+  dat <- cbind(data.frame(dat), data.frame(dat_coords))
+  rm(dat_coords)
+  # make sure millipede data is in same projection as predictor data
+  mill_wide <- spTransform(mill_wide, raster::projection(pred_brick))
   # map standard error of mean
   ggplot() +
-    geom_sf(data = st_as_sf(ir_TM75), fill = NA) +
+    geom_sf(data = st_as_sf(ir_TM75), 
+            fill = NA) +
     geom_tile(data = dat,
               aes(x = eastings, y = northings, fill = se)) +
     ylab("") + xlab("") +
@@ -476,7 +488,8 @@ osab_maps_prediction <- lapply(
     ggplot() + 
       geom_sf(data = st_as_sf(ir_TM75), fill = NA) + 
       geom_tile(data = dat, 
-                aes(x = eastings, y = northings, fill = mean_prediction)) +
+                aes(x = decimalLongitude, y = decimalLatitude, 
+                    fill = mean_prediction)) +
       ylab("") + xlab("") + 
       guides(fill = guide_colorbar(title = "", 
                                    barwidth = unit(0.4 * t_size, "points"))) +

@@ -9,7 +9,7 @@
 ## 
 ## author: Willson Gaul wgaul@hotmail.com
 ## created: 25 Oct 2019
-## last modified: 5 Aug 2021
+## last modified: 16 Aug 2021
 #################################
 
 rm(list = ls())
@@ -21,13 +21,13 @@ seed <- 23012020  # 23 Jan 2020
 run_rf <- T
 make_spatial_blocks <- T # takes a few minutes. Set to T for final run
 get_partial_dependence <- T # calculate partial dependence (time consuming)
-run_evals <- T
+run_evals <- F
 
-analysis_resolution <- 1000 # analysis resolution (10000 or 1000 m rid squares)
+analysis_resolution <- 1000 # analysis resolution (10000 or 1000 m grid squares)
 n_folds <- 3 # number of cross-validation folds to use
-n_cv_trials <- 3#33 # number of different cross-validation fold layouts to use
-cv_block_sizes <- c("random") # sizes of CV spatial blocks (in meters), or "random for random (not spatial block) CV
-n_subsamp_block_draws <- 4#3000 # number of spatial subsampling block configurations to make
+n_cv_trials <- 33 # number of different cross-validation fold layouts to use
+cv_block_sizes <- c("random") # sizes of CV spatial blocks (in meters), or "random" for random (not spatial block) CV
+n_subsamp_block_draws <- 3000 # number of spatial subsampling block configurations to make
 block_range_spat_undersamp <- 30000 # spatial undersampling grid block size (m)
 
 if(make_spatial_blocks == T) set.seed(seed) # only set on 1st run to creat spatial blocks
@@ -52,7 +52,7 @@ library(randomForest)
 
 source("functions_maps_of_ignorance.R")
 
-n_cores <- 4
+n_cores <- 3
 
 # select species to fit models to
 sp_to_fit <- list("Macrosternodesmus palicola", "Boreoiulus tenuis",
@@ -109,13 +109,13 @@ source("plots_supplementary.R")
 ## print numbers for manuscript ------------------------------------------------
 summary(mill$year) # years
 nrow(mill)
-table(mill$Precision)
+table(mill$coordinateUncertaintyInMeters)
 # number of checklists with 1 km resolution or better
-length(unique(mill$checklist_ID[mill$Precision <= 1000]))
+length(unique(mill$checklist_ID[mill$coordinateUncertaintyInMeters <= 1000]))
 
 #*#*# not used right now
 # number of checklists with 10 km resolution or better
-length(unique(mill$checklist_ID[mill$Precision <= 10000])) 
+# length(unique(mill$checklist_ID[mill$coordinateUncertaintyInMeters <= 10000]))
 
 
 ## end print numbers for manuscript -------------------------------------------

@@ -5,7 +5,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 10 June 2020
-## last modified: 9 Dec 2020
+## last modified: 16 Aug 2021
 ##############################
 t_size <- 20
 
@@ -16,7 +16,7 @@ library(GGally)
 # argument to ggpairs
 pred_vals <- data.frame(eastings = mill_wide$eastings, 
                         northings = mill_wide$northings, 
-                        day_of_year = mill_wide$day_of_year, 
+                        month = mill_wide$month, 
                         list_length = mill_wide$list_length, 
                         mean_tn = mill_wide$mean_tn, 
                         mean_rr = mill_wide$mean_rr, 
@@ -30,7 +30,7 @@ pred_cor_plot <- ggpairs(
   data = pred_vals, 
   # title = "Predictor variable values\non millipede checklists", 
   axisLabels = "none", 
-  columnLabels = c("eastings", "northings", "day of\nyear", "checklist\nlength",
+  columnLabels = c("eastings", "northings", "month", "checklist\nlength",
                    "min.\ntemp.", "precip.", "elevation", 
                    "artificial\nsurfaces", "arable\nland", 
                    "wetlands", "forest\nand\nsemi-\nnatural", "pasture"))
@@ -141,12 +141,12 @@ ggplot(data = evals[evals$metric == "AUC" & !is.na(evals$block_cv_range), ],
            y = value, 
            color = factor(
              model, 
-             levels = c("day_ll_rf", "env_ll_rf", "spat_ll_rf", 
+             levels = c("month_ll_rf", "env_ll_rf", "spat_ll_rf", 
                         "env_spat_ll_rf"), 
-             labels = c("\nDay of Year\n(DOY) +\nList Length\n", 
-                        "\nEnvironment +\nDOY +\nList Length\n", 
-                        "\nLat + Lon +\nDOY +\nList Length\n", 
-                        "\nEnvironment + \nLat + Long +\nDOY +\nList Length")))) + 
+             labels = c("\nMonth +\nList Length\n", 
+                        "\nEnvironment +\nMonth +\nList Length\n", 
+                        "\nLat + Lon +\nMonth +\nList Length\n", 
+                        "\nEnvironment + \nLat + Long +\nMonth +\nList Length")))) + 
   geom_boxplot() + 
   facet_wrap(~species + factor(train_data, 
                                levels = c("raw", "spat_subsamp"), 
@@ -165,12 +165,12 @@ ggplot(data = evals[evals$metric == "AUC" &
            y = value, 
            color = factor(
              model, 
-             levels = c("day_ll_rf", "spat_ll_rf","env_ll_rf", 
+             levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf", 
                         "env_spat_ll_rf"), 
-             labels = c("\nDay of Year\n(DOY) +\nList Length\n", 
-                        "\nLat + Lon +\nDOY +\nList Length\n",
-                        "\nEnvironment +\nDOY +\nList Length\n", 
-                        "\nEnvironment + \nLat + Long +\nDOY +\nList Length")))) + 
+             labels = c("\nMonth +\nList Length\n", 
+                        "\nLat + Lon +\nMonth +\nList Length\n",
+                        "\nEnvironment +\nMonth +\nList Length\n", 
+                        "\nEnvironment + \nLat + Long +\nMonth +\nList Length")))) + 
   geom_boxplot() + 
   facet_wrap(~species + factor(
     test_data, 
@@ -241,7 +241,7 @@ vimp$variable <- gsub("l1", "", vimp$variable)
 vimp$variable <- gsub("mean rr", "precipitation", vimp$variable)
 vimp$variable <- gsub("mean tn", "minimum temperature", vimp$variable)
 vimp$variable <- gsub("arable", "arable land", vimp$variable)
-vimp$variable <- gsub(" doy", "(day of year)", vimp$variable)
+vimp$variable <- gsub(" month", "(month)", vimp$variable)
 
 vimp_plots_best <- lapply(sp_to_fit, FUN = function(x, v_df) {
   dat <- v_df[v_df$cv == "random" & v_df$species == x, ]
@@ -331,7 +331,7 @@ pd <- lapply(pd, FUN = function(x) {
     summarise(y = mean(y), 
               species = unique(species), model = unique(model), 
               train_data = unique(train_data)) %>%
-    filter(variable != "cos_doy" & variable != "sin_doy")
+    filter(variable != "cos_month" & variable != "sin_month")
 })
 pd <- bind_rows(pd)
 # make eastings and northings be in km instead of m
@@ -342,8 +342,10 @@ pd$x[pd$variable == "eastings" | pd$variable == "northings"] <-
 pd_raw_plots <- lapply(sp_to_fit, FUN = function(x, dat, vimp) {
   vi <- vimp[vimp$species == x, ] # get variable importance for this sp.
   vi <- vi[order(vi$MeanDecreaseGini, decreasing = T), ]
-  vi <- vi[-which(grepl(".*doy", vi$variable))[2], ]
-  vi$variable <- gsub(".*doy", "day_of_year", vi$variable)
+  # drop less important of the month transformations, so that importance for
+  # month is taken as the importance of the most important month transformation
+  vi <- vi[-which(grepl(".*month", vi$variable))[2], ]
+  vi$variable <- gsub(".*month", "month", vi$variable)
   # make better variable names
   vi$variable <- gsub("arabl.*", "arable\nland", vi$variable)
   vi$variable <- gsub("artific.*", "artificial\nsurfaces", vi$variable)
@@ -553,38 +555,43 @@ for(i in 1:length(sp_to_fit)) {
 ### end plot standardized predictions -----------------------------------------
 
 
-### plot DOY demonstration to show transformed variables -----------------------
+### plot Month demonstration to show transformed variables --------------------
 smod <- readRDS("./saved_objects/env_spat_ll_rf_SubSamp_fits_Macrosternodesmus_palicola1000.rds")
-doy_dat <- data.frame(newdata)
-# add doy 1 to the data, and add more days 
-doy1 <- doy_dat[doy_dat$day_of_year == 20, ]
-doy1$day_of_year <- 1 
-doy1$cos_doy <- cos((2*pi*doy1$day_of_year) / 365)
-doy1$sin_doy <- sin((2*pi*doy1$day_of_year) / 365)
-doy_copy <- doy_dat
-doy_copy$day_of_year <- doy_copy$day_of_year - 10
-doy_copy$cos_doy <- cos((2*pi*doy_copy$day_of_year) / 365)
-doy_copy$sin_doy <- sin((2*pi*doy_copy$day_of_year) / 365)
-
-doy_dat <- bind_rows(doy_dat, doy1, doy_copy) # add additional days
+month_dat <- data.frame(newdata)
+# add month 1 to the data, and add more days 
+# This is a bit garbled now because this code was originally written when I 
+# was using day of year instead of month as the temporal predictor.  I got
+# predictions to every 20th day of the year (rather than every day).  With month
+# there is no need to do that.  So this code should now get a prediction for
+# every month value.
+# month1 <- month_dat[month_dat$month == 1, ]
+# month1$month <- 1 
+# month1$cos_month <- cos((2*pi*month1$month) / 12)
+# month1$sin_month <- sin((2*pi*month1$month) / 12)
+# month_copy <- month_dat
+# # month_copy$month <- month_copy$month - 10
+# month_copy$cos_month <- cos((2*pi*month_copy$month) / 12)
+# month_copy$sin_month <- sin((2*pi*month_copy$month) / 12)
+# 
+# month_dat <- bind_rows(month_dat, month1, month_copy) # add additional days
 # get standardized predictions to each grid cell on each day
-doy_dat$prediction <- predict(smod[[1]][[1]]$m, newdata=doy_dat, 
+month_dat$prediction <- predict(smod[[1]][[1]]$m, newdata=month_dat, 
                               type = "prob")[, "1"]
 
-doy_dat <- group_by(doy_dat, day_of_year, sin_doy, cos_doy) %>%
+month_dat <- group_by(month_dat, month, sin_month, cos_month) %>%
   summarise(mean_pred = mean(prediction))
 
-doy_plot <- ggplot(data = doy_dat, 
-                   aes(x = sin_doy, y = cos_doy, color = day_of_year, 
+month_plot <- ggplot(data = month_dat, 
+                   aes(x = sin_month, y = cos_month, color = month, 
                        size = mean_pred)) + 
   geom_point() + 
-  xlab("Dsin") + ylab("Dcos") +
-  scale_color_continuous(name = "Day of\nyear") + 
+  xlab("Msin") + ylab("Mcos") +
+  scale_color_continuous(name = "Month") + 
   scale_size_continuous("Mean predicted\nprobability\nof being\nrecorded") + 
   theme_bw() + 
   theme(text = element_text(size = t_size))
-doy_plot
-rm(doy1, smod)
+month_plot
+rm(smod)
 ### end plot DOY demonstration ------------------------------------------------
 
 ### re-make atlas map for B. tenuis -------------------------------------------
@@ -632,7 +639,7 @@ ggsave("FigS2.jpg", spat_evenness_boxplot +
        width = 16, height = 16, units = "cm", device = "jpg")
 ggsave("FigS3.jpg", plot(plot_preds), 
        width = 15, height = 15, units = "cm", device = "jpg")
-ggsave("FigS4.jpg", doy_plot + 
+ggsave("FigS4.jpg", month_plot + 
          theme(text = element_text(size = t_size)), 
        width = 15, height = 15, units = "cm", device = "jpg")
 ggsave("FigS5.jpg", multiplot(plotlist = vimp_plots_best[1:3], cols = 1), 

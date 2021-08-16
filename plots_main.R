@@ -322,8 +322,11 @@ pd$x[pd$variable == "eastings" | pd$variable == "northings"] <-
 pd_plots <- lapply(sp_to_fit, FUN = function(x, dat, vimp) {
   vi <- vimp[vimp$species == x, ] # get variable importance for this sp.
   vi <- vi[order(vi$MeanDecreaseGini, decreasing = T), ]
-  vi <- vi[-which(grepl(".*doy", vi$variable))[2], ]
-  vi$variable <- gsub(".*doy", "day_of_year", vi$variable)
+  # remove the less important of the two month variables (either the sin or cos
+  # transformation) so that month importance is taken as the importance of the
+  # most important of the month transformations.
+  vi <- vi[-which(grepl(".*month", vi$variable))[2], ]
+  vi$variable <- gsub(".*month", "month", vi$variable)
   # make better variable names
   vi$variable <- gsub("arabl.*", "arable\nland", vi$variable)
   vi$variable <- gsub("artific.*", "artificial\nsurfaces", vi$variable)
@@ -341,6 +344,8 @@ pd_plots <- lapply(sp_to_fit, FUN = function(x, dat, vimp) {
                         ordered = T)
   
   pdat <- dat[dat$species == x, ] # get pd data for this sp.
+  # remove sin and cos transformations of month
+  pdat <- pdat[pdat$variable %nin% c("sin_month", "cos_month"), ]
   # make better variable names
   pdat$variable <- gsub("arabl.*", "arable\nland", pdat$variable)
   pdat$variable <- gsub("artific.*", "artificial\nsurfaces", pdat$variable)
@@ -354,9 +359,8 @@ pd_plots <- lapply(sp_to_fit, FUN = function(x, dat, vimp) {
   pdat$variable <- gsub("pastu.*", "pasture", pdat$variable)
   pdat$variable <- gsub("wetla.*", "wetlands", pdat$variable)
   pdat$variable <- gsub("day_o.*", "day of\nyear", pdat$variable)
-  # make variable column a factor
+  # make variable column a factor, sorting in order of variable importance
   pdat$variable <- factor(pdat$variable, levels = levels(vi$variable))
- 
   ggplot(data = pdat,
          aes(x = x, y = y)) +
     geom_point() +
@@ -377,11 +381,12 @@ for(sn in c("Macrosternodesmus palicola", "Boreoiulus tenuis",
 }
 
 # plot partial dependence for day of year for all species (for slideshow)
-pd_doy_plots <- lapply(sp_to_fit, FUN = function(x, dat, vimp) {
+pd_month_plots <- lapply(sp_to_fit, FUN = function(x, dat, vimp) {
   vi <- vimp[vimp$species == x, ] # get variable importance for this sp.
   vi <- vi[order(vi$MeanDecreaseGini, decreasing = T), ]
-  vi <- vi[-which(grepl(".*doy", vi$variable))[2], ]
-  vi$variable <- gsub(".*doy", "day_of_year", vi$variable)
+  # remove the less important of the month transformations (cos or sin)
+  vi <- vi[-which(grepl(".*month", vi$variable))[2], ]
+  vi$variable <- gsub(".*month", "month", vi$variable)
   # make better variable names
   vi$variable <- gsub("arabl.*", "arable\nland", vi$variable)
   vi$variable <- gsub("artific.*", "artificial\nsurfaces", vi$variable)
@@ -392,13 +397,14 @@ pd_doy_plots <- lapply(sp_to_fit, FUN = function(x, dat, vimp) {
   vi$variable <- gsub("mean_tn", "annual\nminimum\ntemperature", vi$variable)
   vi$variable <- gsub("pastu.*", "pasture", vi$variable)
   vi$variable <- gsub("wetla.*", "wetlands", vi$variable)
-  vi$variable <- gsub("day_o.*", "day of\nyear", vi$variable)
   
   # make variable column a factor
   vi$variable <- factor(vi$variable, levels = vi$variable, 
                         ordered = T)
   
   pdat <- dat[dat$species == x, ] # get pd data for this sp.
+  # remove cos and sin transformations of month
+  pdat <- pdat[pdat$variable %nin% c("cos_month", "sin_month"), ]
   # make better variable names
   pdat$variable <- gsub("arabl.*", "arable\nland", pdat$variable)
   pdat$variable <- gsub("artific.*", "artificial\nsurfaces", pdat$variable)
@@ -411,11 +417,10 @@ pd_doy_plots <- lapply(sp_to_fit, FUN = function(x, dat, vimp) {
                         pdat$variable)
   pdat$variable <- gsub("pastu.*", "pasture", pdat$variable)
   pdat$variable <- gsub("wetla.*", "wetlands", pdat$variable)
-  pdat$variable <- gsub("day_o.*", "day of\nyear", pdat$variable)
   # make variable column a factor
   pdat$variable <- factor(pdat$variable, levels = levels(vi$variable))
   
-  ggplot(data = pdat[pdat$variable == "day of\nyear", ],
+  ggplot(data = pdat[pdat$variable == "month", ],
          aes(x = x, y = y)) +
     geom_point() +
     geom_line() +

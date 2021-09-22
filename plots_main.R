@@ -9,7 +9,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 13 May 2020
-## last modified: 6 Aug 2021
+## last modified: 21 Sep 2021
 ##############################
 library(patchwork)
 try(rm(block_subsamp, fold_assignments, hec_names_spat, mill_fewer_vars, 
@@ -43,6 +43,19 @@ annot <- data.frame(x1 = c(265000, 310000, 60000, 60000),
                     label = c(NA, "100 km", NA, "N"), 
                     bias = "D")
 
+# Number of detections per species when using 1 km resolution
+n_detections_per_species_1km <- data.frame(
+  table(mill$species[mill$coordinateUncertaintyInMeters <= 1000]))
+n_detections_per_species_1km <- n_detections_per_species_1km[order(
+  n_detections_per_species_1km$Freq, decreasing = FALSE), ]
+colnames(n_detections_per_species_1km) <- c("species", "number_of_detections")
+n_detections_per_species_1km <- n_detections_per_species_1km[
+  n_detections_per_species_1km$species %in% sp_to_fit, ]
+# add proportion of checklists that have a detection of each species
+n_detections_per_species_1km$proportion_detections <- round(
+  n_detections_per_species_1km$number_of_detections / nrow(mill_wide), 
+  digits = 3)
+n_detections_per_species_1km
 
 ### Map example spatially under-sampled data ----------------------------------
 ## get an example spatially under-sampled dataset
@@ -187,22 +200,26 @@ auc_summary <- group_by(auc_summary, species, model, train_data) %>%
   pivot_wider(names_from = train_data, values_from = mean_auc) %>%
   mutate(change_after_subsampling = spat_subsamp - raw)
 
+auc_summary <- left_join(auc_summary, n_detections_per_species_1km, 
+                         by = "species")
+
 auc_means_plot <- ggplot(
   data = auc_summary, 
   aes(
-    x = factor(species, 
-               levels = c("Macrosternodesmus palicola", 
-                          "Boreoiulus tenuis", 
-                          "Ommatoiulus sabulosus", 
-                          "Blaniulus guttulatus", 
-                          "Glomeris marginata", 
-                          "Cylindroiulus punctatus"),
-               labels = c("M. palicola", 
-                          "Boreoiulus\ntenuis", 
-                          "O. sabulosus", 
-                          "Blaniulus\nguttulatus", 
-                          "G. marginata", 
-                          "C. punctatus")), 
+    # x = factor(species, 
+    #            levels = c("Macrosternodesmus palicola", 
+    #                       "Boreoiulus tenuis", 
+    #                       "Ommatoiulus sabulosus", 
+    #                       "Blaniulus guttulatus", 
+    #                       "Glomeris marginata", 
+    #                       "Cylindroiulus punctatus"),
+    #            labels = c("M. palicola", 
+    #                       "Boreoiulus\ntenuis", 
+    #                       "O. sabulosus", 
+    #                       "Blaniulus\nguttulatus", 
+    #                       "G. marginata", 
+    #                       "C. punctatus")), 
+    x = as.numeric(as.character(proportion_detections)), 
     y = change_after_subsampling, 
     color = factor(
       model, 
@@ -229,8 +246,8 @@ auc_means_plot <- ggplot(
   #                               "Glomeris marginata", 
   #                               "Cylindroiulus punctatus"),
   #                    labels = c("(a)", "(b)", "(c)", "(d)", "(e)", "(f)"))) + 
-  xlab("Species") + 
-  ylab("Change in AUC") + 
+  xlab("Proportion of checklists\nwith a detection") + 
+  ylab("Change in mean AUC") + 
   scale_color_viridis_d(name = "Model", #option = "magma", 
                         begin = 0.1, end = 0.8, direction = -1) + 
   scale_shape(name = "Model") + 
@@ -551,23 +568,12 @@ table(as.numeric(table(repeat_visits$en, repeat_visits$year)))
 # number of checklists
 nrow(mill_wide)
 
-# proportion of lists with list lenght of 1
+# proportion of lists with list length of 1
 length(which(mill_wide$list_length == 1)) / nrow(mill_wide)
-# proportion of lists with list lenght of 1
+# proportion of lists with list length of 2
 length(which(mill_wide$list_length == 2)) / nrow(mill_wide)
 
 # Number of detections per species when using 1 km resolution
-n_detections_per_species_1km <- data.frame(
-  table(mill$species[mill$coordinateUncertaintyInMeters <= 1000]))
-n_detections_per_species_1km <- n_detections_per_species_1km[order(
-  n_detections_per_species_1km$Freq, decreasing = FALSE), ]
-colnames(n_detections_per_species_1km) <- c("species", "number_of_detections")
-n_detections_per_species_1km <- n_detections_per_species_1km[
-  n_detections_per_species_1km$species %in% sp_to_fit, ]
-# add proportion of checklists that have a detection of each species
-n_detections_per_species_1km$proportion_detections <- round(
-  n_detections_per_species_1km$number_of_detections / nrow(mill_wide), 
-  digits = 3)
 n_detections_per_species_1km
 
 # some AUC summary stats

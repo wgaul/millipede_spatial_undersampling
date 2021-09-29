@@ -9,9 +9,10 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 13 May 2020
-## last modified: 21 Sep 2021
+## last modified: 29 Sep 2021
 ##############################
 library(patchwork)
+library(ggh4x)
 try(rm(block_subsamp, fold_assignments, hec_names_spat, mill_fewer_vars, 
        mill_spat))
 t_size <- 20
@@ -336,6 +337,20 @@ pd$x[pd$variable == "eastings" | pd$variable == "northings"] <-
 
 ## make pd plots using random CV, spatially under-sampled training data, and
 ## the best model
+# first define function to set breaks in individual facets
+# pd_breaks <- function(vals) {
+#   if(min(vals) < 2 & max(vals) < 13) {c(1, 3, 6, 9, 12)} else {
+#     c(floor(seq(from = min(vals), to = max(vals), length.out = 5)))
+#   }
+# }
+pd_breaks <- function(vals) {
+  if(floor(min(vals)) >= -1 & floor(max(vals)) < 2) {
+    seq(0, 1, length.out = 3)} else {
+    signif(seq(from = min(vals), to = max(vals), length.out = 5), 
+           digits = 1)
+  }
+}
+# make plots
 pd_plots <- lapply(sp_to_fit, FUN = function(x, dat, vimp) {
   vi <- vimp[vimp$species == x, ] # get variable importance for this sp.
   vi <- vi[order(vi$MeanDecreaseGini, decreasing = T), ]

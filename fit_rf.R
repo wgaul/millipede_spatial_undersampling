@@ -10,7 +10,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 23 Jan 2020
-## last modified: 6 Aug 2021
+## last modified: 112 Oct 2021
 ##############################
 
 on_sonic <- F
@@ -765,14 +765,19 @@ for(mod_name in mod_names) {
             probs <- as.numeric(as.character(predict(mod, newdata = ndat, 
                                                      type = "prob")[, "1"]))
             
-            # make any probabilities of zero be slightly positive to prevent 
-            # problems with taking the log
+            # make any probabilities of zero be slightly positive 
+            # and probabililties of one be slightly less 
+            # to prevent problems with taking the log
             probs[probs == 0] <- 0.0001
+            probs[probs == 1] <- 0.9999
             
             # get the partial dependence following eq 10.52 of Elements of 
             # Stat. Learning
             dependence[dv] <- mean(log(probs)) - 
               ((mean(log(probs)) + mean(log(1-probs)))/2)
+            if(is.infinite(dependence[dv])) {
+              warning(paste0("Infinite values in partial dependence calculations.  fi = ", fi, " , xi = ", xi))
+            }
           }
           
           # add dependence for month to df with other dependences

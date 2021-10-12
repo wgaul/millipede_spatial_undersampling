@@ -9,7 +9,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 13 May 2020
-## last modified: 29 Sep 2021
+## last modified: 12 Oct 2021
 ##############################
 library(patchwork)
 library(ggh4x)
@@ -337,19 +337,6 @@ pd$x[pd$variable == "eastings" | pd$variable == "northings"] <-
 
 ## make pd plots using random CV, spatially under-sampled training data, and
 ## the best model
-# first define function to set breaks in individual facets
-# pd_breaks <- function(vals) {
-#   if(min(vals) < 2 & max(vals) < 13) {c(1, 3, 6, 9, 12)} else {
-#     c(floor(seq(from = min(vals), to = max(vals), length.out = 5)))
-#   }
-# }
-pd_breaks <- function(vals) {
-  if(floor(min(vals)) >= -1 & floor(max(vals)) < 2) {
-    seq(0, 1, length.out = 3)} else {
-    signif(seq(from = min(vals), to = max(vals), length.out = 5), 
-           digits = 1)
-  }
-}
 # make plots
 pd_plots <- lapply(sp_to_fit, FUN = function(x, dat, vimp) {
   vi <- vimp[vimp$species == x, ] # get variable importance for this sp.
@@ -464,6 +451,153 @@ pd_month_plots <- lapply(sp_to_fit, FUN = function(x, dat, vimp) {
           axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
 }, dat = pd[pd$train_data == "spat_subsamp" & pd$cv == "random", ], 
 vimp = vimp[vimp$train_dat == "spat_subsamp" & vimp$cv == "random", ])
+
+
+### Figure 5.  
+## plot partial dependence for O. sabulosus with more control over axes
+# get pd data for this sp.
+osab_pd_dat <- pd[pd$train_data == "spat_subsamp" & pd$cv == "random" & 
+                    pd$species == "Ommatoiulus sabulosus", ] 
+# remove sin and cos transformations of month
+osab_pd_dat <- osab_pd_dat[osab_pd_dat$variable %nin% 
+                             c("sin_month", "cos_month"), ]
+# make better variable names
+osab_pd_dat$variable <- gsub("arabl.*", "arable\nland", osab_pd_dat$variable)
+osab_pd_dat$variable <- gsub("artific.*", "artificial\nsurfaces", 
+                             osab_pd_dat$variable)
+osab_pd_dat$variable <- gsub("elev", "elevation", osab_pd_dat$variable)
+osab_pd_dat$variable <- gsub("fores.*", "forest and\nsemi-natural\nland", 
+                             osab_pd_dat$variable)
+osab_pd_dat$variable <- gsub("list_l.*", "checklist\nlength", 
+                             osab_pd_dat$variable)
+osab_pd_dat$variable <- gsub("mean_rr", "annual\nprecipitation", 
+                             osab_pd_dat$variable)
+osab_pd_dat$variable <- gsub("mean_tn", "annual\nminimum\ntemperature", 
+                             osab_pd_dat$variable)
+osab_pd_dat$variable <- gsub("pastu.*", "pasture", osab_pd_dat$variable)
+osab_pd_dat$variable <- gsub("wetla.*", "wetlands", osab_pd_dat$variable)
+osab_pd_dat$variable <- gsub("day_o.*", "day of\nyear", osab_pd_dat$variable)
+
+# make plot for each variable.  I will combine these later with patchwork
+osab_eastings <- ggplot(
+  data = osab_pd_dat[osab_pd_dat$variable == "eastings", ], 
+  aes(x = x, y = y)) + 
+  geom_point() +
+  geom_line() +
+  ylab("") + 
+  xlab("") + 
+  scale_y_continuous(limits = c(-1.2, 0), 
+                     breaks = c(-0.9, -0.6, -0.3, 0)) + 
+  theme_bw() + 
+  ggtitle("(a)") +
+  theme(text = element_text(size = t_size), 
+        axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+
+osab_month <- ggplot(
+  data = osab_pd_dat[osab_pd_dat$variable == "month", ], 
+  aes(x = x, y = y)) + 
+  geom_point() +
+  geom_line() +
+  ylab("") + 
+  xlab("") + 
+  scale_y_continuous(limits = c(-1.2, 0), 
+                     breaks = c(-0.9, -0.6, -0.3, 0)) + 
+  scale_x_continuous(limits = c(1, 12), breaks = c(3, 6, 9, 12)) +
+  theme_bw() + 
+  ggtitle("(b)") +
+  theme(text = element_text(size = t_size), 
+        axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+
+osab_precip <- ggplot(
+  data = osab_pd_dat[osab_pd_dat$variable == "annual\nprecipitation", ], 
+  aes(x = x, y = y)) + 
+  geom_point() +
+  geom_line() +
+  ylab("") + 
+  xlab("") +  
+  scale_y_continuous(limits = c(-1.2, 0), 
+                     breaks = c(-0.9, -0.6, -0.3, 0)) + 
+  theme_bw() + 
+  ggtitle("(c)") +
+  scale_x_continuous(limits = c(800, 2350), 
+                     breaks = c(800, 1200, 1600, 2000, 2400)) +
+  theme(text = element_text(size = t_size), 
+        axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+
+osab_northings <- ggplot(
+  data = osab_pd_dat[osab_pd_dat$variable == "northings", ], 
+  aes(x = x, y = y)) + 
+  geom_point() +
+  geom_line() +
+  ylab("Partial dependence") + 
+  xlab("") + 
+  scale_y_continuous(limits = c(-1.2, 0), 
+                     breaks = c(-0.9, -0.6, -0.3, 0)) + 
+  theme_bw() + 
+  ggtitle("(d)") +
+  theme(text = element_text(size = t_size), 
+        axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+
+osab_elev <- ggplot(
+  data = osab_pd_dat[osab_pd_dat$variable == "elevation", ], 
+  aes(x = x, y = y)) + 
+  geom_point() +
+  geom_line() +
+  ylab("") + 
+  xlab("") + 
+  scale_y_continuous(limits = c(-1.2, 0), 
+                     breaks = c(-0.9, -0.6, -0.3, 0)) + 
+  theme_bw() + 
+  ggtitle("(e)") +
+  scale_x_continuous(breaks = c(100, 300, 500)) +
+  theme(text = element_text(size = t_size), 
+        axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+
+osab_ll <- ggplot(
+  data = osab_pd_dat[osab_pd_dat$variable == "checklist\nlength", ], 
+  aes(x = x, y = y)) + 
+  geom_point() +
+  geom_line() +
+  ylab("") + 
+  xlab("") +  
+  scale_y_continuous(limits = c(-1.2, 0), 
+                     breaks = c(-0.9, -0.6, -0.3, 0)) + 
+  theme_bw() + 
+  ggtitle("(f)") +
+  theme(text = element_text(size = t_size), 
+        axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+
+osab_artificial <- ggplot(
+  data = osab_pd_dat[osab_pd_dat$variable == "artificial\nsurfaces", ], 
+  aes(x = x, y = y)) + 
+  geom_point() +
+  geom_line() +
+  ylab("") + 
+  xlab("") + 
+  scale_y_continuous(limits = c(-1.2, 0), 
+                     breaks = c(-0.9, -0.6, -0.3, 0)) + 
+  theme_bw() + 
+  ggtitle("(g)") +
+  theme(text = element_text(size = t_size), 
+        axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+
+osab_wetlands <- ggplot(
+  data = osab_pd_dat[osab_pd_dat$variable == "wetlands", ], 
+  aes(x = x, y = y)) + 
+  geom_point() +
+  geom_line() +
+  ylab("") + 
+  xlab("") + 
+  scale_y_continuous(limits = c(-1.2, 0), 
+                     breaks = c(-0.9, -0.6, -0.3, 0)) + 
+  theme_bw() + 
+  ggtitle("(h)") +
+  theme(text = element_text(size = t_size), 
+        axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+
+osab_pd_plots <- list(osab_eastings, osab_month, osab_precip, osab_northings, 
+                      osab_elev, osab_ll, osab_artificial, osab_wetlands)
+wrap_plots(osab_pd_plots, ncol = 3)
 
 rm(pd, vimp)
 ### end plot partial dependence -----------------------------------------------
@@ -618,7 +752,7 @@ ggsave("Fig3.jpg", auc_all_models_plot, width = 20, height = 20, units = "cm",
        device = "jpg")
 ggsave("Fig4.jpg", performance_best_mod_plot, width = 20, height = 20, 
        units = "cm", device = "jpg")
-ggsave("Fig5.jpg", pd_plots[["Ommatoiulus sabulosus"]] + ggtitle(""), 
+ggsave("Fig5.jpg", wrap_plots(osab_pd_plots, ncol = 3), 
        width = 20, height = 20, units = "cm", device = "jpg")
 ggsave("Fig6.jpg", osab_maps[[2]] + ylab("Latitude") + ggtitle("(a)") + 
          geom_segment(data = annot[1, ], aes(x = x1, xend = x2, y = y1, yend = y2)) + 

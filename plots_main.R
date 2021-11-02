@@ -9,7 +9,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 13 May 2020
-## last modified: 12 Oct 2021
+## last modified: 2 Nov 2021
 ##############################
 library(patchwork)
 library(ggh4x)
@@ -702,6 +702,17 @@ osab_maps[[1]]+ osab_maps[[2]] + osab_maps[[3]] + plot_spacer() +
 
 
 ### print tables and numbers for text -----------------------------------------
+## Abstract
+# average number of records per species
+nrow(mill) / length(unique(mill$species))
+
+## Methods
+# percent of checklists with detections of each sp
+data.frame(auc_summary[auc_summary$model == "env_spat_ll_rf", ])
+# n checklists
+dim(mill_wide)
+length(unique(mill$checklist_ID))
+
 # Number of repeat visits to grid cells (though there could be multiple 
 # locations visited within a grid cell, so these are not necessarily true 
 # repeat visits)

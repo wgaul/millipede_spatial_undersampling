@@ -5,8 +5,8 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 10 June 2020
-## last modified: 16 Aug 2021
-##############################
+## last modified: 2 Nov 2021
+#############################
 t_size <- 20
 
 library(GGally)
@@ -133,29 +133,6 @@ class_balance_boxplot <- ggplot(
         axis.text.x = element_text(angle = 25, hjust = 1, vjust = 1))
 
 
-
-
-## look at effect of block CV range size
-ggplot(data = evals[evals$metric == "AUC" & !is.na(evals$block_cv_range), ], 
-       aes(x = factor(block_cv_range), 
-           y = value, 
-           color = factor(
-             model, 
-             levels = c("month_ll_rf", "env_ll_rf", "spat_ll_rf", 
-                        "env_spat_ll_rf"), 
-             labels = c("\nMonth +\nList Length\n", 
-                        "\nEnvironment +\nMonth +\nList Length\n", 
-                        "\nLat + Lon +\nMonth +\nList Length\n", 
-                        "\nEnvironment + \nLat + Long +\nMonth +\nList Length")))) + 
-  geom_boxplot() + 
-  facet_wrap(~species + factor(train_data, 
-                               levels = c("raw", "spat_subsamp"), 
-                               labels = c("raw", "spatially\nundersampled"))) + 
-  scale_color_viridis_d(name = "Model", #option = "magma", 
-                        begin = 0.1, end = 0.8)
-
-
-
 ### plot AUC with all combinations of training and test data for random CV ----
 ggplot(data = evals[evals$metric == "AUC" & 
                       as.character(evals$block_cv_range) == "random", ], 
@@ -184,37 +161,6 @@ ggplot(data = evals[evals$metric == "AUC" &
   theme_bw() + 
   theme(text = element_text(size = t_size))
 ### end AUC ----------------------------------------------------------------
-
-
-## plot all performance metrics for best model - block CV ---------------------
-evals_median_blockCV <- filter(evals, model == "env_spat_ll_rf" & 
-                              block_cv_range == "30000" & 
-                              test_data == "spat_subsamp") %>%
-  select(species, train_data, metric, value) %>%
-  group_by(species, metric, train_data) %>% 
-  summarise(median = median(value))
-
-
-ggplot(data = evals_median_blockCV, 
-       aes(x = factor(train_data, 
-                      levels = c("raw", "spat_subsamp"), 
-                      labels =  c("raw", "spatially\nundersampled")), 
-           y = median, 
-           group = factor(species))) + 
-  geom_point(aes(color = factor(species))) + 
-  geom_line(aes(color = factor(species))) + 
-  facet_wrap(~factor(metric, 
-                     levels = c("AUC", "sensitivity", "specificity", "Kappa", 
-                                "Brier"), ordered = T)) + 
-  xlab("Training Data") + 
-  ylab("value") + 
-  ggtitle(paste0("30 km block CV\nmodel resolution: ", analysis_resolution)) + 
-  scale_color_viridis_d(name = "Species", #option = "magma", 
-                        begin = 0, end = 0.8) + 
-  theme_bw() + 
-  theme(text = element_text(size = t_size))
-## end plot performance for best model - block CV -----------------------------
-
 
 
 ### plot variable importance --------------------------------------------------
@@ -267,35 +213,6 @@ vimp_plots_best <- lapply(sp_to_fit, FUN = function(x, v_df) {
 
 # for(i in 1:length(vimp_plots_best)) print(vimp_plots_best[i])
 multiplot(plotlist = vimp_plots_best, cols = 2) # variable importance for best model
-
-
-## graph variable importance by CV strategy for best model and both raw and 
-## subsampled training data
-# CV strategy does not change variable importance conlcusions
-# read in variable importance results
-vimp <- list.files("./saved_objects/")
-vimp <- vimp[grepl("var_import.*", vimp)]
-vimp <- vimp[grepl(paste0(".*", analysis_resolution, ".rds"), vimp)]
-vimp <- vimp[grepl(".*env_spat_ll.*", vimp)]
-vimp <- lapply(vimp, function(x) readRDS(paste0("./saved_objects/", x)))
-# average the variable importance from each CV fold
-vimp <- lapply(vimp, FUN = function(x) {
-  group_by(x, variable, cv) %>%
-    summarise(MeanDecreaseGini = mean(MeanDecreaseGini), 
-              species = unique(species), model = unique(model), 
-              train_dat = unique(train_dat))
-})
-vimp_plots <- lapply(vimp, FUN = function(x) {
-  ggplot(data = x, 
-         aes(x = variable, y = MeanDecreaseGini)) + 
-    geom_bar(stat = "identity") + 
-    coord_flip() + 
-    ggtitle(paste0(x$species[1], "\n", x$model[1], ", trained with: ", 
-                   x$train_dat[1], "\n")) + 
-    facet_wrap(~cv)
-})
-
-for(i in 1:length(vimp_plots)) print(vimp_plots[i])
 ### end plot variable importance ----------------------------------------------
 
 
@@ -474,6 +391,8 @@ for(i in 1:length(sp_to_fit)) {
     facet_wrap(~factor(training_data, levels = c("raw", "spat_subsamp"), 
                        labels = c("raw", "spatially\nundersampled"))) + 
     xlab("Mean prediction") + ylab("Standard error") + 
+    xlim(0, 1) + 
+    ylim(0, 0.025) +
     ggtitle(sn) + 
     theme_bw() + 
     theme(text = element_text(size = 0.55*t_size))
@@ -558,22 +477,7 @@ for(i in 1:length(sp_to_fit)) {
 ### plot Month demonstration to show transformed variables --------------------
 smod <- readRDS("./saved_objects/env_spat_ll_rf_SubSamp_fits_Macrosternodesmus_palicola1000.rds")
 month_dat <- data.frame(newdata)
-# add month 1 to the data, and add more days 
-# This is a bit garbled now because this code was originally written when I 
-# was using day of year instead of month as the temporal predictor.  I got
-# predictions to every 20th day of the year (rather than every day).  With month
-# there is no need to do that.  So this code should now get a prediction for
-# every month value.
-# month1 <- month_dat[month_dat$month == 1, ]
-# month1$month <- 1 
-# month1$cos_month <- cos((2*pi*month1$month) / 12)
-# month1$sin_month <- sin((2*pi*month1$month) / 12)
-# month_copy <- month_dat
-# # month_copy$month <- month_copy$month - 10
-# month_copy$cos_month <- cos((2*pi*month_copy$month) / 12)
-# month_copy$sin_month <- sin((2*pi*month_copy$month) / 12)
-# 
-# month_dat <- bind_rows(month_dat, month1, month_copy) # add additional days
+
 # get standardized predictions to each grid cell on each day
 month_dat$prediction <- predict(smod[[1]][[1]]$m, newdata=month_dat, 
                               type = "prob")[, "1"]
@@ -629,7 +533,6 @@ Bten_atlas_map <- ggplot() +
 Bten_atlas_map
 ### end re-make atlas map ----------------------------------------------------
 
-
 #### save plots to files -------------------------------------------------------
 ggsave("FigS1.jpg", class_balance_boxplot + 
          theme(text = element_text(size = t_size*0.6)), 
@@ -637,22 +540,80 @@ ggsave("FigS1.jpg", class_balance_boxplot +
 ggsave("FigS2.jpg", spat_evenness_boxplot + 
          theme(text = element_text(size = t_size*0.6)), 
        width = 16, height = 16, units = "cm", device = "jpg")
+ggsave("FigS3.jpg", multiplot(plotlist = vimp_plots_best[1:3], cols = 1), 
+       width = 15, height = 20, units = "cm", device = "jpg")
+ggsave("FigS4.jpg", multiplot(plotlist = vimp_plots_best[4:6], cols = 1), 
+       width = 15, height = 22, units = "cm", device = "jpg")
+ggsave("FigS5.jpg", pd_raw_plots[["Macrosternodesmus palicola"]] + 
+         pd_plots[["Macrosternodesmus palicola"]] + 
+         plot_annotation(tag_levels = "a") & 
+         theme(text = element_text(size = 0.7*t_size)), 
+       width = 20, height = 14, units = "cm", device = "jpg")
+ggsave("FigS6.jpg", pd_raw_plots[["Boreoiulus tenuis"]] + 
+         pd_plots[["Boreoiulus tenuis"]] + 
+         plot_annotation(tag_levels = "a") & 
+         theme(text = element_text(size = 0.7*t_size)), 
+       width = 20, height = 14, units = "cm", device = "jpg")
+ggsave("FigS7.jpg", pd_raw_plots[["Ommatoiulus sabulosus"]] + 
+         pd_plots[["Ommatoiulus sabulosus"]] + 
+         plot_annotation(tag_levels = "a") & 
+         theme(text = element_text(size = 0.7*t_size)), 
+       width = 20, height = 14, units = "cm", device = "jpg")
+ggsave("FigS8.jpg", pd_raw_plots[["Blaniulus guttulatus"]] + 
+         pd_plots[["Blaniulus guttulatus"]] + 
+         plot_annotation(tag_levels = "a") & 
+         theme(text = element_text(size = 0.6*t_size), 
+               axis.text.x = element_text(angle = 45, 
+                                          hjust = 1, vjust = 1)), 
+       width = 20, height = 18, units = "cm", device = "jpg")
+ggsave("FigS9.jpg", pd_raw_plots[["Glomeris marginata"]] + 
+         pd_plots[["Glomeris marginata"]] + 
+         plot_annotation(tag_levels = "a") & 
+         theme(text = element_text(size = 0.6*t_size), 
+               axis.text.x = element_text(angle = 45, 
+                                          hjust = 1, vjust = 1)), 
+       width = 20, height = 18, units = "cm", device = "jpg")
+ggsave("FigS10.jpg", pd_raw_plots[["Cylindroiulus punctatus"]] + 
+         pd_plots[["Cylindroiulus punctatus"]] + 
+         plot_annotation(tag_levels = "a") & 
+         theme(text = element_text(size = 0.6*t_size), 
+               axis.text.x = element_text(angle = 45, 
+                                          hjust = 1, vjust = 1)), 
+       width = 20, height = 18, units = "cm", device = "jpg")
+ggsave("FigS11.jpg", sp_map_list[[1]][[1]] + sp_map_list[[1]][[2]] + 
+         sp_map_list[[1]][[3]] + 
+         plot_spacer() + sp_map_list[[1]][[4]] + sp_map_list[[1]][[5]], 
+       width = 20, height = 20*0.6, units = "cm", device = "jpg")
+ggsave("FigS12.jpg", sp_map_list[[2]][[1]] + sp_map_list[[2]][[2]] + 
+         sp_map_list[[2]][[3]] + 
+         plot_spacer() + sp_map_list[[2]][[4]] + sp_map_list[[2]][[5]], 
+       width = 20, height = 20*0.6, units = "cm", device = "jpg")
+ggsave("FigS13.jpg", sp_map_list[[4]][[1]] + sp_map_list[[4]][[2]] + 
+         sp_map_list[[4]][[3]] + 
+         plot_spacer() + sp_map_list[[4]][[4]] + sp_map_list[[4]][[5]], 
+       width = 20, height = 20*0.6, units = "cm", device = "jpg")
+ggsave("FigS14.jpg", sp_map_list[[5]][[1]] + sp_map_list[[5]][[2]] + 
+         sp_map_list[[5]][[3]] + 
+         plot_spacer() + sp_map_list[[5]][[4]] + sp_map_list[[5]][[5]], 
+       width = 20, height = 20*0.6, units = "cm", device = "jpg")
+ggsave("FigS15.jpg", sp_map_list[[6]][[1]] + sp_map_list[[6]][[2]] + 
+         sp_map_list[[6]][[3]] + 
+         plot_spacer() + sp_map_list[[6]][[4]] + sp_map_list[[6]][[5]], 
+       width = 20, height = 20*0.6, units = "cm", device = "jpg")
+
+
+
+
+
+##### OLD
+
 ggsave("FigS3.jpg", plot(plot_preds), 
        width = 15, height = 15, units = "cm", device = "jpg")
 ggsave("FigS4.jpg", month_plot + 
          theme(text = element_text(size = t_size)), 
        width = 15, height = 15, units = "cm", device = "jpg")
-ggsave("FigS5.jpg", multiplot(plotlist = vimp_plots_best[1:3], cols = 1), 
-       width = 15, height = 20, units = "cm", device = "jpg")
-ggsave("FigS6.jpg", multiplot(plotlist = vimp_plots_best[4:6], cols = 1), 
-       width = 15, height = 22, units = "cm", device = "jpg")
 
 
-ggsave("FigS18.jpg", pred_se_cor_plots[[1]] + pred_se_cor_plots[[2]] + 
-         pred_se_cor_plots[[3]] + pred_se_cor_plots[[4]] + 
-         pred_se_cor_plots[[5]] + pred_se_cor_plots[[6]] + 
-         plot_layout(ncol = 2), 
-       width = 16, height = 16, units = "cm", device = "jpg")
 ggsave("FigS19.jpg", pred_cor_plot, width = 20, height = 20, 
        units = "cm", device = "jpg")
 ggsave("FigS20.jpg", list_length_map, width = 17, height = 15, 
@@ -661,67 +622,22 @@ ggsave("FigS20.jpg", list_length_map, width = 17, height = 15,
 
 
 
-ggsave("FigSPD1.jpg", pd_raw_plots[["Macrosternodesmus palicola"]] + 
-       pd_plots[["Macrosternodesmus palicola"]] + 
-         plot_annotation(tag_levels = "a") & 
-         theme(text = element_text(size = 0.7*t_size)), 
-       width = 20, height = 14, units = "cm", device = "jpg")
-ggsave("FigSPD2.jpg", pd_raw_plots[["Boreoiulus tenuis"]] + 
-         pd_plots[["Boreoiulus tenuis"]] + 
-         plot_annotation(tag_levels = "a") & 
-         theme(text = element_text(size = 0.7*t_size)), 
-       width = 20, height = 14, units = "cm", device = "jpg")
-ggsave("FigSPD3.jpg", pd_raw_plots[["Ommatoiulus sabulosus"]] + 
-         pd_plots[["Ommatoiulus sabulosus"]] + 
-         plot_annotation(tag_levels = "a") & 
-         theme(text = element_text(size = 0.7*t_size)), 
-       width = 20, height = 14, units = "cm", device = "jpg")
-ggsave("FigSPD4.jpg", pd_raw_plots[["Blaniulus guttulatus"]] + 
-         pd_plots[["Blaniulus guttulatus"]] + 
-         plot_annotation(tag_levels = "a") & 
-         theme(text = element_text(size = 0.6*t_size), 
-               axis.text.x = element_text(angle = 45, 
-                                          hjust = 1, vjust = 1)), 
-       width = 20, height = 18, units = "cm", device = "jpg")
-ggsave("FigSPD5.jpg", pd_raw_plots[["Glomeris marginata"]] + 
-         pd_plots[["Glomeris marginata"]] + 
-         plot_annotation(tag_levels = "a") & 
-         theme(text = element_text(size = 0.6*t_size), 
-               axis.text.x = element_text(angle = 45, 
-                                          hjust = 1, vjust = 1)), 
-       width = 20, height = 18, units = "cm", device = "jpg")
-ggsave("FigSPD6.jpg", pd_raw_plots[["Cylindroiulus punctatus"]] + 
-         pd_plots[["Cylindroiulus punctatus"]] + 
-         plot_annotation(tag_levels = "a") & 
-         theme(text = element_text(size = 0.6*t_size), 
-               axis.text.x = element_text(angle = 45, 
-                                          hjust = 1, vjust = 1)), 
-       width = 20, height = 18, units = "cm", device = "jpg")
 
-ggsave("FigSP1.jpg", sp_map_list[[1]][[1]] + sp_map_list[[1]][[2]] + 
-         sp_map_list[[1]][[3]] + 
-         plot_spacer() + sp_map_list[[1]][[4]] + sp_map_list[[1]][[5]], 
-       width = 20, height = 20*0.6, units = "cm", device = "jpg")
-ggsave("FigSP2.jpg", sp_map_list[[2]][[1]] + sp_map_list[[2]][[2]] + 
-         sp_map_list[[2]][[3]] + 
-         plot_spacer() + sp_map_list[[2]][[4]] + sp_map_list[[2]][[5]], 
-       width = 20, height = 20*0.6, units = "cm", device = "jpg")
+
 ggsave("FigSP3.jpg", sp_map_list[[3]][[1]] + sp_map_list[[3]][[2]] + 
          sp_map_list[[3]][[3]] + 
          plot_spacer() + sp_map_list[[3]][[4]] + sp_map_list[[3]][[5]], 
        width = 20, height = 20*0.6, units = "cm", device = "jpg")
-ggsave("FigSP4.jpg", sp_map_list[[4]][[1]] + sp_map_list[[4]][[2]] + 
-         sp_map_list[[4]][[3]] + 
-         plot_spacer() + sp_map_list[[4]][[4]] + sp_map_list[[4]][[5]], 
-       width = 20, height = 20*0.6, units = "cm", device = "jpg")
-ggsave("FigSP5.jpg", sp_map_list[[5]][[1]] + sp_map_list[[5]][[2]] + 
-         sp_map_list[[5]][[3]] + 
-         plot_spacer() + sp_map_list[[5]][[4]] + sp_map_list[[5]][[5]], 
-       width = 20, height = 20*0.6, units = "cm", device = "jpg")
-ggsave("FigSP6.jpg", sp_map_list[[6]][[1]] + sp_map_list[[6]][[2]] + 
-         sp_map_list[[6]][[3]] + 
-         plot_spacer() + sp_map_list[[6]][[4]] + sp_map_list[[6]][[5]], 
-       width = 20, height = 20*0.6, units = "cm", device = "jpg")
+
+# I no longer think this correlation of standard errors with predictions
+# is informative, because it just shows SE is highest near predictions of 0.5, 
+# which is expected with a binomial-type response.
+ggsave("FigS16.jpg", pred_se_cor_plots[[1]] + pred_se_cor_plots[[2]] + 
+         pred_se_cor_plots[[3]] + pred_se_cor_plots[[4]] + 
+         pred_se_cor_plots[[5]] + pred_se_cor_plots[[6]] + 
+         plot_layout(ncol = 2), 
+       width = 16, height = 16, units = "cm", device = "jpg")
+
 
 ggsave("Fig_Btenuis_atlasSDM.jpg", Bten_atlas_map +
          (sp_map_list[[2]][[3]] + ggtitle("(b)")) + plot_spacer() + 

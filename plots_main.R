@@ -750,6 +750,15 @@ auc_summary[auc_summary$species == "Cylindroiulus punctatus", 1:4]
 
 data.frame(group_by(auc_summary, species) %>%
   arrange(spat_subsamp, .by_group = TRUE))
+
+# checklist density millipedes in Ireland
+nrow(mill_wide) / 84400 # aprox. area of IE in km^2
+
+# checklist density Robinson winter
+108880 / 423900
+# checklist density Robinson summer
+302655 / 423900
+
 ### end print tables and numbers for text  ------------------------------------
 
 ### save plots ----------------------------------------------------------------

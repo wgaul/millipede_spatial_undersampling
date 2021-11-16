@@ -9,7 +9,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 13 May 2020
-## last modified: 2 Nov 2021
+## last modified: 16 Nov 2021
 ##############################
 library(patchwork)
 library(ggh4x)
@@ -758,6 +758,30 @@ nrow(mill_wide) / 84400 # aprox. area of IE in km^2
 108880 / 423900
 # checklist density Robinson summer
 302655 / 423900
+
+# correlation of checklist length with covariates
+pred_vals <- data.frame(list_length = mill_wide$list_length, 
+                        eastings = mill_wide$eastings, 
+                        northings = mill_wide$northings, 
+                        month = mill_wide$month, 
+                        mean_tn = mill_wide$mean_tn, 
+                        mean_rr = mill_wide$mean_rr, 
+                        elev = mill_wide$elev, 
+                        artificial = mill_wide$artificial_surfaces, 
+                        arable = mill_wide$arable_l2, 
+                        wetlands = mill_wide$wetlands_l1, 
+                        forest = mill_wide$forest_seminatural_l1, 
+                        pasture = mill_wide$pasture_l2)
+pred_cors <- c()
+for(i in 2:ncol(pred_vals)) {
+  pred_cors <- c(pred_cors, 
+                 cor(pred_vals[, 1], pred_vals[, i], method = "spearman"))
+}
+summary(pred_cors)
+abs(min(pred_cors))
+abs(max(pred_cors))
+
+
 
 ### end print tables and numbers for text  ------------------------------------
 

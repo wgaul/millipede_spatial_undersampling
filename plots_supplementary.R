@@ -5,7 +5,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 10 June 2020
-## last modified: 2 Nov 2021
+## last modified: 16 Nov 2021
 #############################
 t_size <- 20
 
@@ -600,7 +600,8 @@ ggsave("FigS15.jpg", sp_map_list[[6]][[1]] + sp_map_list[[6]][[2]] +
          sp_map_list[[6]][[3]] + 
          plot_spacer() + sp_map_list[[6]][[4]] + sp_map_list[[6]][[5]], 
        width = 20, height = 20*0.6, units = "cm", device = "jpg")
-
+ggsave("FigS16.jpg", list_length_map, width = 17, height = 15, 
+       units = "cm", device = "jpg")
 
 
 
@@ -616,8 +617,7 @@ ggsave("FigS4.jpg", month_plot +
 
 ggsave("FigS19.jpg", pred_cor_plot, width = 20, height = 20, 
        units = "cm", device = "jpg")
-ggsave("FigS20.jpg", list_length_map, width = 17, height = 15, 
-       units = "cm", device = "jpg")
+
 
 
 

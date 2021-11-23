@@ -9,7 +9,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 13 May 2020
-## last modified: 16 Nov 2021
+## last modified: 23 Nov 2021
 ##############################
 library(patchwork)
 library(ggh4x)
@@ -94,7 +94,7 @@ map_Osab_raw <- ggplot() +
   geom_sf(data = st_as_sf(mill_wide[mill_wide$`Ommatoiulus sabulosus` == 0, ]), 
           color = "dark grey", size = 0.04*t_size) + 
   geom_sf(data = st_as_sf(mill_wide[mill_wide$`Ommatoiulus sabulosus` == 1, ]), 
-          color = "dark orange", size = 0.04*t_size) + 
+          color = "black", size = 0.04*t_size) + 
   geom_segment(data = annot[1, ], aes(x = x1, xend = x2, y = y1, yend = y2)) + 
   geom_text(data = annot[c(2, 4), ], aes(x = x1, y = y1, label = label)) + 
   geom_segment(data = annot[3, ], aes(x = x1, xend = x2, y = y1, yend = y2), 
@@ -110,7 +110,7 @@ map_Osab_spat_subsamp <- ggplot() +
   geom_sf(data = st_as_sf(ex_osab[ex_osab$`Ommatoiulus.sabulosus` == 0, ]), 
           color = "dark grey", size = 0.04*t_size) + 
   geom_sf(data = st_as_sf(ex_osab[ex_osab$`Ommatoiulus.sabulosus` == 1, ]), 
-          color = "dark orange", size = 0.04*t_size) + 
+          color = "black", size = 0.04*t_size) + 
   xlab("Longitude") + ggtitle("(b)") + 
   theme_bw() + 
   theme(text = element_text(size = 0.7*t_size), 
@@ -247,7 +247,7 @@ auc_means_plot <- ggplot(
   #                               "Glomeris marginata", 
   #                               "Cylindroiulus punctatus"),
   #                    labels = c("(a)", "(b)", "(c)", "(d)", "(e)", "(f)"))) + 
-  xlab("Proportion of checklists\nwith a detection") + 
+  xlab("Species prevalence\nin raw data") + 
   ylab("Change in mean AUC") + 
   scale_color_viridis_d(name = "Model", #option = "magma", 
                         begin = 0.1, end = 0.8, direction = -1) + 
@@ -701,7 +701,7 @@ osab_maps[[1]]+ osab_maps[[2]] + osab_maps[[3]] + plot_spacer() +
 ### end plot standardized predictions -----------------------------------------
 
 
-### print tables and numbers for text -----------------------------------------
+### print tables and numbers for manuscript -----------------------------------
 ## Abstract
 # average number of records per species
 nrow(mill) / length(unique(mill$species))

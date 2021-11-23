@@ -72,14 +72,6 @@ list_length_map <- ggplot(data = ll_df,
 ## end checklist length plots -------------------------------------------------
 
 ## spatial evenness of training and test datasets ----------------------------
-# spat_evenness_boxplot_bothCV <- ggplot(
-#   data = evals[!is.na(evals$simpson_training_subsampBlock), ], 
-#   aes(x = factor(block_cv_range), y = simpson_training_subsampBlock)) + 
-#   geom_boxplot() + 
-#   facet_wrap(~train_data) + 
-#   ggtitle("Spatial Evenness of training data\ncalculated at subsample block scale\nincluding cells with zero observations")
-# spat_evenness_boxplot_bothCV
-
 spat_evenness_boxplot <- ggplot(
   data = evals[!is.na(evals$simpson_training_subsampBlock) & 
                  evals$block_cv_range == "random" & 
@@ -93,12 +85,13 @@ spat_evenness_boxplot <- ggplot(
   facet_wrap(~species) + 
   xlab("Training data") + ylab("Simpson's evenness") +
   # ggtitle("Spatial Evenness of training data\ncalculated at subsample block scale\nincluding cells with zero observations") + 
+  ylim(0, 1) +
   theme_bw() + 
   theme(text = element_text(size = t_size), 
         axis.text.x = element_text(angle = 25, hjust = 1, vjust = 1))
 spat_evenness_boxplot
 # number of datasets used in boxplot = 
-# number of species * number of models * number of model runs (33)
+# number of models * number of model runs (33)
 4*33
 ### end spatial evenness of datasets plot --------------------------------------
 
@@ -128,6 +121,7 @@ class_balance_boxplot <- ggplot(
   ylab("Proportion of checklists with a detection\nin training CV folds") + 
   xlab("Training data") +
   geom_abline(slope = 0, intercept = 0.5, linetype = "dashed") + 
+  ylim(0, 1) + 
   theme_bw() + 
   theme(text = element_text(size = t_size), 
         axis.text.x = element_text(angle = 25, hjust = 1, vjust = 1))

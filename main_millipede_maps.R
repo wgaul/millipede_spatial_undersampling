@@ -106,22 +106,6 @@ source("plots_main.R")
 source("plots_supplementary.R")
 
 
-## print numbers for manuscript ------------------------------------------------
-summary(mill$year) # years
-nrow(mill)
-table(mill$coordinateUncertaintyInMeters)
-# number of checklists with 1 km resolution or better
-length(unique(mill$checklist_ID[mill$coordinateUncertaintyInMeters <= 1000]))
-
-#*#*# not used right now
-# number of checklists with 10 km resolution or better
-# length(unique(mill$checklist_ID[mill$coordinateUncertaintyInMeters <= 10000]))
-
-
-## end print numbers for manuscript -------------------------------------------
-
-
-
 make_sampling_plots <- F # map sampling coverage in env. and geographic space
 if(make_sampling_plots) source("sampling_coverage_maps.R")
 

@@ -215,7 +215,7 @@ call_fit_rf <- function(fold_assignments, sp_name, test_fold, sp_df,
   #         assigned to
   #       sp_name - character string giving the name of the column with species
   #           detection/non-detection data
-  #       test_fold - integer givin the CV fold to be used for testing
+  #       test_fold - integer giving the CV fold to be used for testing
   #       sp_df - data frame with species observations and predictor variables
   #       pred_names - character vector with names of columns to be used as 
   #           predictor variables

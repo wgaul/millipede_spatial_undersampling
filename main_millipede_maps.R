@@ -9,7 +9,7 @@
 ## 
 ## author: Willson Gaul wgaul@hotmail.com
 ## created: 25 Oct 2019
-## last modified: 21 Sep 2021
+## last modified: 11 April 2022
 #################################
 
 rm(list = ls())
@@ -19,6 +19,7 @@ seed <- 23012020  # 23 Jan 2020
 
 
 run_rf <- F
+run_rf_randomUndersample <- T
 make_spatial_blocks <- F # takes a few minutes. Set to T for final run
 get_partial_dependence <- F # calculate partial dependence (time consuming)
 run_evals <- F
@@ -30,7 +31,8 @@ cv_block_sizes <- c("random") # sizes of CV spatial blocks (in meters), or "rand
 n_subsamp_block_draws <- 3000 # number of spatial subsampling block configurations to make
 block_range_spat_undersamp <- 30000 # spatial undersampling grid block size (m)
 
-if(make_spatial_blocks == T) set.seed(seed) # only set on 1st run to creat spatial blocks
+# only set on 1st run to create spatial blocks
+if(make_spatial_blocks == T) set.seed(seed) 
 
 library(wgutil)
 library(Hmisc)
@@ -88,7 +90,12 @@ source("prepare_objects_for_SDM.R")
 mod_names <- c("month_ll_rf", "spat_ll_rf", "env_ll_rf", "env_spat_ll_rf")
 mods_for_pd_plots <- c("env_spat_ll_rf")
 
-if(run_rf) source("fit_rf.R")
+# this fits models with raw and spatially under-sampled data
+if(run_rf) source("fit_rf.R") 
+
+# this fits models with randomly undersampled data (added April 2022)
+if(run_rf_randomUndersample) source("fit_rf_randomUndersample.R") 
+
 
 ## evaluate models
 # Specify the model(s) using the string that was used as the beginning of the 

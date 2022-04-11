@@ -137,52 +137,6 @@ browser()
       all_hectads$nrec[is.na(all_hectads$nrec)] <- 0
       simps_train_hec <- simpson_even(as.numeric(all_hectads$nrec))
     } else simps_train_hec <- NA
-    
-    ## calculate at spatial subsampling block scale (e.g. 30k X 30km)
-    lst_spat <- SpatialPointsDataFrame(
-      coords = sp_df[, c("eastings", "northings")], 
-      data = sp_df, proj4string = CRS("+init=epsg:29903"))
-    # make sure millipede data is in same projection as predictor data
-    lst_spat <- spTransform(lst_spat, raster::projection(pred_brick))
-    
-    lst_spat <- lst_spat[ , "checklist_ID"] # make df of checklists
-    blks <- spatialBlock(lst_spat, 
-                         theRange = block_range_spat_undersamp,
-                         k = n_folds, selection = "random", iteration = 5, 
-                         xOffset = runif(n = 1, min = 0, max = 1), 
-                         yOffset = runif(n = 1, min = 0, max = 1),
-                         showBlocks = FALSE, 
-                         rasterLayer = pred_brick$pasture_l2, 
-                         biomod2Format = FALSE)
-    # add spatial subsampling grid cell ID to each hectad
-    all_hectads <- hec_names
-    all_hectads <- SpatialPointsDataFrame(
-      coords = all_hectads[, c("eastings", "northings")], 
-      data = all_hectads, proj4string = CRS("+init=epsg:29903"))
-    all_hectads <- st_join(st_as_sf(all_hectads), 
-                           st_as_sf(blks$blocks[, names(
-                             blks$blocks) == "layer"]))
-    all_hectads <- data.frame(all_hectads)
-    colnames(all_hectads)[which(
-      colnames(all_hectads) == "layer")] <- "subsamp_blocks"
-    # remove geometry column
-    all_hectads <- all_hectads[, -which(grepl(".*geomet.*", 
-                                              colnames(all_hectads)))]
-    table_nobs <- data.frame(table(sp_df$hectad)) # count nrec per hectad
-    colnames(table_nobs) <- c("hectad", "nrec")
-    # add number of recs
-    all_hectads <- left_join(all_hectads, table_nobs, by = "hectad")
-    all_hectads$nrec[is.na(all_hectads$nrec)] <- 0
-    # sum number of recs per subsample block
-    all_hectads <- group_by(all_hectads, subsamp_blocks) %>%
-      summarise(nrec = sum(nrec))
-    simps_train_subsampBlock <- simpson_even(as.numeric(all_hectads$nrec))
-    rm(all_hectads, blks, lst_spat)
-  } else {
-    simps_train_hec <- NA
-    simps_train_subsampBlock <- NA
-  }
-  
   
   # return fitted model, and predictions for this model
   tryCatch(list(
@@ -192,7 +146,6 @@ browser()
     n_detections_test_fold = try(sum(sp_df[sp_df$folds == test_fold, 
                                            sp_name])),
     simpson_training_hectad = simps_train_hec, 
-    simpson_training_subsampBlock = simps_train_subsampBlock, 
     proportion_detections = prop_dets), 
     error = function(x) "No list exported from fit_rf.")
 }

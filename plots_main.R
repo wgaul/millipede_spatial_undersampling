@@ -781,14 +781,36 @@ summary(pred_cors)
 abs(min(pred_cors))
 abs(max(pred_cors))
 
-
+# number of checklists at each spatial resolution
+table(mill$coordinateUncertaintyInMeters)
+mill_temp <- read_tsv("./data/GBIF_27_Feb_2021_download/occurrence.txt")
+# remove unwanted columns
+mill_temp <- mill_temp[ , -c(2, 5:11, 13:15, 18:26, 28:36, 38:48, 51:54, 
+                             67, 72:79, 82:86, 95, 104:105, 107:108, 
+                             140:166, 212:215)]
+# remove records with no date
+mill_temp <- mill_temp[!is.na(mill_temp$eventDate), ]
+# keep only records from 1970 to present
+mill_temp <- mill_temp[mill_temp$year >= 1970, ]
+mill_temp <- mill_temp[mill_temp$taxonRank == "SPECIES", ]
+## make checlist ID variable
+mill_temp$checklist_ID <- paste0(mill_temp$recordedBy, mill_temp$eventDate, 
+                                 mill_temp$locality, 
+                                 mill_temp$decimalLatitude, 
+                                 mill_temp$decimalLongitude)
+# how many checklists with spatial resolution <= 1 km?
+length(unique(mill_temp$checklist_ID[
+  mill_temp$coordinateUncertaintyInMeters <= 1000]))
+# how many checklists with spatial resolution > 1 km?
+length(unique(mill_temp$checklist_ID[
+  mill_temp$coordinateUncertaintyInMeters > 1000]))
 
 ### end print tables and numbers for text  ------------------------------------
 
 ### save plots ----------------------------------------------------------------
 ## save as jpg
 ggsave("Fig1.jpg", map_Osab_raw + map_Osab_spat_subsamp, 
-       width = 20, height = 20/2, units = "cm", 
+       width = 15, height = 15/1.5, units = "cm", 
        device = "jpg")
 ggsave("Fig2.jpg", auc_means_plot, width = 20, height = 20, units = "cm", 
        device = "jpg")

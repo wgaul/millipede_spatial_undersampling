@@ -7,7 +7,7 @@
 ##############################
 
 ### load millipede data
-# NBDC training and test data
+# GBIF data
 mill <- read_tsv("./data/GBIF_27_Feb_2021_download/occurrence.txt")
 # remove unwanted columns
 mill <- mill[ , -c(2, 5:11, 13:15, 18:26, 28:36, 38:48, 51:54, 67, 72:79, 82:86,

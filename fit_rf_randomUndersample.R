@@ -43,12 +43,13 @@ fit_rf_random_undersample <- function(test_fold, sp_name, sp_df, pred_names,
   #       predictors
   #       newdata - new data for predictions with standardized recording effort
   #       sp_df_original - the original (not undersampled) data
+
   if(is_tibble(sp_df)) {
     sp_df <- data.frame(sp_df)
   }
   sp_name <- gsub(" ", ".", sp_name)
   colnames(sp_df) <- gsub(" ", ".", colnames(sp_df))
-browser()  
+ 
   # label which observations are in the test fold
   sp_df$test_fold <- sp_df$folds == test_fold
   sp_df_original$test_fold <- sp_df_original$folds == test_fold
@@ -115,12 +116,13 @@ browser()
                 northings = mean(northings))
   } else stop("Analysis resolution must be either 10000 or 1000")
   
-  
-  ## calculate class balance (proportion of checklists with a detection)
+ 
+  ## calculate class balance (proportion of checklists with a detection) for
+  ## data IN THIS TRAINING FOLD
   prop_dets <- tryCatch({
     length(which(sp_df[sp_df$folds != test_fold, 
                        which(colnames(sp_df) == sp_name)] != 0)) / 
-      nrow(sp_df)}, error = function (x) NA)
+      nrow(sp_df[sp_df$folds != test_fold, ])}, error = function (x) NA)
   
   ## calculate Simpson's evenness for training and test datasets
   # Only calculate this for fold # 1.  The same dataset is used in multiple 
@@ -137,17 +139,22 @@ browser()
       all_hectads$nrec[is.na(all_hectads$nrec)] <- 0
       simps_train_hec <- simpson_even(as.numeric(all_hectads$nrec))
     } else simps_train_hec <- NA
+  }
   
   # return fitted model, and predictions for this model
   tryCatch(list(
     m = mod, preds = preds, standardized_preds = newdata, 
-    train_sites = unique(newdata$hectad[newdata$folds != test_fold]), 
-    test_sites = unique(newdata$hectad[newdata$folds == test_fold]), 
+    train_sites = tryCatch(unique(newdata$hectad[newdata$folds != test_fold]),
+                           error = function(x) NA),
+    test_sites = tryCatch(unique(newdata$hectad[newdata$folds == test_fold]), 
+                          error = function(x) NA),
     n_detections_test_fold = try(sum(sp_df[sp_df$folds == test_fold, 
                                            sp_name])),
-    simpson_training_hectad = simps_train_hec, 
-    proportion_detections = prop_dets), 
-    error = function(x) "No list exported from fit_rf.")
+    simpson_training_hectad = tryCatch(simps_train_hec, error = function(x) NA), 
+    proportion_detections = prop_dets, 
+    data_for_this_model = sp_df[, colnames(sp_df) %in% 
+                                  c("checklist_ID", "folds", "test_fold")]), 
+    error = function(x) "No list exported from fit_rf_random_undersample")
 }
 
 call_fit_rf_random_undersample <- function(fold_assignments, sp_name, test_fold, 
@@ -174,7 +181,7 @@ call_fit_rf_random_undersample <- function(fold_assignments, sp_name, test_fold,
   #           for each species
   #       random.under.sample - T/F indicating whether to perform random
   #           under sampling.
-  
+browser()  
   # add CV fold assignments to sp_df
   if(class(fold_assignments) == "SpatialBlock") {
     sp_df <- st_join(
@@ -233,7 +240,7 @@ call_fit_rf_random_undersample <- function(fold_assignments, sp_name, test_fold,
   }
   
   newdata <- data.frame(newdata) # must be df (nob-spatial) for fit_rf()
-  browser()  
+ 
   # fit RF
   lapply(1:n_folds, FUN = fit_rf_random_undersample, sp_name = sp_name, 
          sp_df = sp_df, pred_names = pred_names, newdata = newdata, 
@@ -280,9 +287,246 @@ if("month_ll_rf" %in% mod_names) {
                                          analysis_resolution, ".rds")))
     rm(month_ll_rf_fits)
   }
-} ### end month of Year + List Length ------------------------------------------
+} 
+### end month of Year + List Length ------------------------------------------
 
 
+if("spat_ll_rf" %in% mod_names) {
+  ### fit Spatial + List Length + month models -----------------------------
+  # train with randomly undersampled data
+  for(i in 1:length(sp_to_fit)) {
+    sp_name <- names(sp_to_fit)[i]
+    spat_rf_fits <- mclapply(
+      fold_assignments, 
+      sp_name = sp_name, 
+      FUN = call_fit_rf_random_undersample, 
+      sp_df = mill_wide, 
+      class_balance_df = class_balance_df,
+      random.under.sample = TRUE, 
+      pred_names = c("eastings", "northings", 
+                     "sin_month", "cos_month", "list_length"), 
+      block_subsamp = block_subsamp, 
+      pred_brick = pred_brick, newdata = newdata,
+      spatial.under.sample = FALSE, 
+      mtry = 1, 
+      mc.cores = n_cores)
+    try(print(pryr::object_size(spat_rf_fits)))
+    try(saveRDS(spat_rf_fits, paste0("./saved_objects/", 
+                                         "spat_ll_rf_randomSubSamp_fits_", 
+                                         gsub(" ", "_", sp_name), 
+                                         analysis_resolution, ".rds")))
+    rm(spat_rf_fits)
+  }
+} 
+### end Spatial + List Length + month ------------------------------------------
 
-rm(class_balance_df)
+if("env_ll_rf" %in% mod_names) {
+  ### fit environmental + LL + month models ------------------------------------
+  # train with randomly undersampled data
+  for(i in 1:length(sp_to_fit)) {
+    sp_name <- names(sp_to_fit)[i]
+    env_rf_fits <- mclapply(
+      fold_assignments, 
+      sp_name = sp_name, 
+      FUN = call_fit_rf_random_undersample, 
+      sp_df = mill_wide, 
+      class_balance_df = class_balance_df,
+      random.under.sample = TRUE, 
+      pred_names = c(sp_predictors[[which(names(sp_predictors) == sp_name)]],
+                     "sin_month", "cos_month", "list_length"), 
+      block_subsamp = block_subsamp, 
+      pred_brick = pred_brick, newdata = newdata,
+      spatial.under.sample = FALSE, 
+      mtry = 1, 
+      mc.cores = n_cores)
+    try(print(pryr::object_size(env_rf_fits)))
+    try(saveRDS(env_rf_fits, paste0("./saved_objects/", 
+                                         "env_ll_rf_randomSubSamp_fits_", 
+                                         gsub(" ", "_", sp_name), 
+                                         analysis_resolution, ".rds")))
+    rm(env_rf_fits)
+  }
+} 
+### end environmental + LL + month ------------------------------------------
 
+
+if("env_spat_ll_rf" %in% mod_names) {
+  ### fit environmental + lat + long + LL + month models -----------------------
+  # train with randomly undersampled data
+  for(i in 1:length(sp_to_fit)) {
+    sp_name <- names(sp_to_fit)[i]
+    env_rf_fits <- mclapply(
+      fold_assignments, 
+      sp_name = sp_name, 
+      FUN = call_fit_rf_random_undersample, 
+      sp_df = mill_wide, 
+      class_balance_df = class_balance_df,
+      random.under.sample = TRUE, 
+      pred_names = c(sp_predictors[[which(names(sp_predictors) == sp_name)]],
+                     "eastings", "northings", 
+                     "sin_month", "cos_month", "list_length"), 
+      block_subsamp = block_subsamp, 
+      pred_brick = pred_brick, newdata = newdata,
+      spatial.under.sample = FALSE, 
+      mtry = 1, 
+      mc.cores = n_cores)
+    try(print(pryr::object_size(env_rf_fits)))
+    try(saveRDS(env_rf_fits, paste0("./saved_objects/", 
+                                         "env_spat_ll_rf_randomSubSamp_fits_", 
+                                         gsub(" ", "_", sp_name), 
+                                         analysis_resolution, ".rds")))
+    rm(env_rf_fits)
+  }
+} 
+### end environmental + lat + long + LL + month -------------------------------
+### end fit random forest ----------------------------------------------------
+
+### Get elements of the fitted models for results -----------------------------
+# TODO: Here 12 April
+for(mod_name in mod_names) {
+  for(i in 1:length(sp_to_fit)) {
+    ######### trained with random undersampling #############################
+    fits <- readRDS(paste0("./saved_objects/", mod_name, 
+                           "_randomSubSamp_fits_", 
+                           gsub(" ", "_", sp_to_fit[[i]]), analysis_resolution, 
+                           ".rds"))
+    
+    ## Get predictions to actual data
+    predictions <- lapply(fits, FUN = function(x) {
+      lapply(x[sapply(x, is.list)], FUN = function(x) {
+        preds <- tryCatch(x$preds, error = function(x) NA)
+        return(preds)})})
+    predictions <- bind_rows(lapply(
+      predictions, FUN = function(x) {bind_rows(x[!is.na(x)])}))
+    # save results
+    try(saveRDS(predictions, 
+                paste0("./saved_objects/", "actual_predictions_", 
+                       mod_name, "_randomSubSamp_", 
+                       gsub(" ", "_", sp_to_fit[[i]]), analysis_resolution, 
+                       ".rds")))
+    
+    # Get predictions with standardized survey effort
+    mill_predictions <- lapply(fits, FUN = function(x) {
+      lapply(x[sapply(x, is.list)], FUN = function(x) {
+        preds <- tryCatch(x$standardized_preds, error = function(x) NA)
+        return(preds)})})
+    mill_predictions <- bind_rows(lapply(
+      mill_predictions, FUN = function(x) {bind_rows(x[!is.na(x)])}))
+    # save results
+    try(saveRDS(mill_predictions, 
+                paste0("./saved_objects/", 
+                       "standard_predictions_", mod_name, "_randomSubSamp_", 
+                       gsub(" ", "_", sp_to_fit[[i]]), analysis_resolution, 
+                       ".rds")))
+    
+    # get variable importance (averaged over 5 folds) 
+    var_imp <- lapply(fits, FUN = function(x) {
+      bind_rows(lapply(x[sapply(x, is.list)], FUN = function(y) {
+        df <- data.frame(y$m$importance)
+        df$variable <- rownames(df)
+        df[, c("variable", "MeanDecreaseGini")]
+        df$species <- sp_name
+        df$model <- mod_name
+        df$train_dat <- "random_subsamp"
+        return(df)}))}
+    )
+    var_imp <- bind_rows(var_imp)
+    # save results
+    try(saveRDS(var_imp, 
+                paste0("./saved_objects/", 
+                       "var_importance_", mod_name, "_randomSubSamp_", 
+                       gsub(" ", "_", sp_to_fit[[i]]), analysis_resolution, 
+                       ".rds")))
+    
+    if(get_partial_dependence & mod_name %in% mods_for_pd_plots) {
+      ## get partial dependence
+      # have to do this in for loops because when using lapply it seems R can't
+      # interpret a variable holding the name of the variable to get plot for
+      # in the partialPlot call.
+      pd_list <- list()
+      # loop through versions of this model for this species
+      for(fi in 1:length(fits)) { 
+        fits_pd <- list()
+        for(xi in 1:length(fits[[fi]])) { # loop through all cv folds
+          mod <- fits[[fi]][[xi]]$m
+          vars <- as.character(rownames(importance(mod))) # get variable names
+          # get partial dependence for each variable
+          pl <- list()
+          for(vb in 1:length(vars)) {
+            pd <- data.frame(partialPlot(mod, 
+                                         pred.data = data.frame(mill_wide), 
+                                         x.var = vars[vb], 
+                                         which.class = "1", plot = FALSE))
+            pd$variable <- vars[vb]
+            pd$species <- sp_name
+            pd$model <- mod_name
+            pd$train_data <- "random_subsamp"
+            pl[[vb]] <- pd
+          }
+          pl <- bind_rows(pl)
+          
+          # add partial dependence for month
+          ## calculate partial dependence for that same mean_rr variable by hand
+          # This is my best guess about how to do this based on eq. 53 from that
+          # Friedman (2001) article
+          
+          # make month values to predict to
+          month_vals <- seq(from = 1, to = 12)
+          # create a vector to hold the mean prediction for each month value
+          dependence <- c() 
+          
+          for(dv in 1:length(month_vals)) {
+            # copy the training data to use for getting predictions
+            ndat <- data.frame(mill_wide) 
+            # fix month values to the value we are testing
+            ndat$month <- month_vals[dv] 
+            # calculate sin and cos of month
+            ndat$sin_month <- sin((2*pi*ndat$month) / 12) 
+            ndat$cos_month <- cos((2*pi*ndat$month) / 12)
+            # get predicted values for each case in the training data but 
+            # with the month (and cos_month and sin_month) values fixed 
+            # to the value that we are testing
+            probs <- as.numeric(as.character(predict(mod, newdata = ndat, 
+                                                     type = "prob")[, "1"]))
+            
+            # make any probabilities of zero be slightly positive 
+            # and probabililties of one be slightly less 
+            # to prevent problems with taking the log
+            probs[probs == 0] <- 0.0001
+            probs[probs == 1] <- 0.9999
+            
+            # get the partial dependence following eq 10.52 of Elements of 
+            # Stat. Learning
+            dependence[dv] <- mean(log(probs)) - 
+              ((mean(log(probs)) + mean(log(1-probs)))/2)
+            if(is.infinite(dependence[dv])) {
+              warning(paste0("Infinite values in partial dependence calculations.  fi = ", fi, " , xi = ", xi))
+            }
+          }
+          
+          # add dependence for month to df with other dependences
+          pd_month <- data.frame(
+            x = month_vals, y = dependence, 
+            variable = "month", species = sp_name, 
+            model = mod_name, train_data = "spat_subsamp", 
+            cv = as.character(fits[[fi]][[xi]]$block_cv_range))
+          pl <- bind_rows(pl, pd_month)
+          
+          fits_pd[[xi]] <- pl
+        }
+        pd_list[[fi]] <- bind_rows(fits_pd)
+      }
+      pd_list <- bind_rows(pd_list)
+      # save results
+      try(saveRDS(pd_list, 
+                  paste0("./saved_objects/", 
+                         "partial_dependence_", mod_name, "_randomSubSamp_", 
+                         gsub(" ", "_", sp_to_fit[[i]]), analysis_resolution, 
+                         ".rds")))
+    } # end get partial dependence plots
+    try(rm(fits, pd_list, var_imp, mill_predictions))
+  }
+}
+
+try(rm(class_balance_df))
+print(Sys.time())

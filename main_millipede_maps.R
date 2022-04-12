@@ -57,10 +57,10 @@ source("functions_maps_of_ignorance.R")
 n_cores <- 2
 
 # select species to fit models to
-sp_to_fit <- list("Macrosternodesmus palicola", "Boreoiulus tenuis",
-                  "Ommatoiulus sabulosus", "Blaniulus guttulatus",
-                  "Glomeris marginata", "Cylindroiulus punctatus")
-# sp_to_fit <- "Cylindroiulus punctatus"
+# sp_to_fit <- list("Macrosternodesmus palicola", "Boreoiulus tenuis",
+#                   "Ommatoiulus sabulosus", "Blaniulus guttulatus",
+#                   "Glomeris marginata", "Cylindroiulus punctatus")
+sp_to_fit <- "Macrosternodesmus palicola"
 names(sp_to_fit) <- sp_to_fit
 
 # define environmental predictors for each species
@@ -85,9 +85,9 @@ sp_predictors <- list(
 
 source("prepare_data.R")
 source("prepare_objects_for_SDM.R")
-# mod_names <- c("month_ll_rf", "spat_ll_rf")
+mod_names <- c("month_ll_rf", "spat_ll_rf")
 # mod_names <- c("env_ll_rf", "env_spat_ll_rf")
-mod_names <- c("month_ll_rf", "spat_ll_rf", "env_ll_rf", "env_spat_ll_rf")
+# mod_names <- c("month_ll_rf", "spat_ll_rf", "env_ll_rf", "env_spat_ll_rf")
 mods_for_pd_plots <- c("env_spat_ll_rf")
 
 # this fits models with raw and spatially under-sampled data

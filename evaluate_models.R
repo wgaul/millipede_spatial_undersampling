@@ -1054,7 +1054,7 @@ for(i in 1:length(sp_to_fit)) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
-  
+ 
   # put evaluation metrics for every fold into df
   ev <- data.frame(species = sp_name, model = mod_name, 
                    train_data = "random_subsamp", 
@@ -1081,7 +1081,7 @@ for(i in 1:length(sp_to_fit)) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
-  
+ 
   # put evaluation metrics for every fold into df
   ev <- data.frame(species = sp_name, model = mod_name, 
                    train_data = "random_subsamp", 
@@ -1109,7 +1109,7 @@ for(i in 1:length(sp_to_fit)) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
-  
+
   # put evaluation metrics for every fold into df
   ev <- data.frame(species = sp_name, model = mod_name, 
                    train_data = "random_subsamp", 
@@ -1140,7 +1140,7 @@ for(i in 1:length(sp_to_fit)) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
-  
+ 
   # put evaluation metrics for every fold into df
   ev <- data.frame(species = sp_name, model = mod_name, 
                    train_data = "random_subsamp", 
@@ -1158,7 +1158,7 @@ for(i in 1:length(sp_to_fit)) {
       # select test dataset to use for this test
       test_data <- test_points_ss[[sample(1:length(test_points_ss), 
                                           size = 1)]]
-      browser()
+
       # subset to spatially  subsampled test data points that are in the test 
       # fold for this model
       test_data <- test_data[test_data$hectad %in% y$test_sites |
@@ -1202,7 +1202,7 @@ for(i in 1:length(sp_to_fit)) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
-  
+
   # put evaluation metrics for every fold into df
   ev <- data.frame(species = sp_name, model = mod_name, 
                    train_data = "random_subsamp", 
@@ -1210,7 +1210,6 @@ for(i in 1:length(sp_to_fit)) {
                    value = unlist(lapply(aucs, FUN = function(x) {
                      lapply(x, FUN = function (y) {y$auc})})), 
                    simpson_training_hectad = unlist(simps_trains_hec), 
-                   simpson_training_subsampBlock = unlist(simps_trains_blk), 
                    proportion_detections = unlist(prop_dets), 
                    n_dets_in_test = unlist(lapply(aucs, FUN = function(x) {
                      lapply(x, FUN = function (y) {
@@ -1260,7 +1259,7 @@ for(i in 1:length(sp_to_fit)) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
-  
+ 
   # put evaluation metrics for every fold into df
   ev <- data.frame(species = sp_name, model = mod_name, 
                    train_data = "random_subsamp", 
@@ -1389,7 +1388,7 @@ for(i in 1:length(sp_to_fit)) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
-  
+ 
   # put evaluation metrics for every fold into df
   ev <- data.frame(species = sp_name, model = mod_name, 
                    train_data = "random_subsamp", 

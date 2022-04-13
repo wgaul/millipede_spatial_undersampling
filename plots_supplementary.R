@@ -5,7 +5,19 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 10 June 2020
-## last modified: 16 Nov 2021
+## last modified: 13 April 2022
+##  NOTE: As of April 2022, the results and eval metrics include models trained
+##  with randomly under-sampled data.  Those results are not incorporated into
+##  the supplementary plots.  This script uses a variable indicating what type
+##  of cross-validation was used to test models (random or spatial block cv).  
+##  That is left over from when I was originally testing both CV methods. 
+##  I now use only random CV because of reasons documented elsewhere.  
+##  When I fitted models with randomly under-sampled data, I did not include
+##  a column indicating the CV method.  However, this script still expects
+##  that column about the CV method, so this script will only run if you remove
+##  all the results from the models with randomly under-sampled data.  Probably
+##  a few lines of filtering code to not read in file names that indicate
+##  random undersampling is all that is needed, but I have not done that yet.
 #############################
 t_size <- 20
 
@@ -128,32 +140,32 @@ class_balance_boxplot <- ggplot(
 
 
 ### plot AUC with all combinations of training and test data for random CV ----
-ggplot(data = evals[evals$metric == "AUC" & 
-                      as.character(evals$block_cv_range) == "random", ], 
-       aes(x = factor(train_data, 
-                      levels = c("raw", "spat_subsamp"), 
-                      labels =  c("raw", "spatially\nundersampled")), 
-           y = value, 
-           color = factor(
-             model, 
-             levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf", 
-                        "env_spat_ll_rf"), 
-             labels = c("\nMonth +\nList Length\n", 
-                        "\nLat + Lon +\nMonth +\nList Length\n",
-                        "\nEnvironment +\nMonth +\nList Length\n", 
-                        "\nEnvironment + \nLat + Long +\nMonth +\nList Length")))) + 
-  geom_boxplot() + 
-  facet_wrap(~species + factor(
-    test_data, 
-    levels = c("raw", "spat_subsamp"), 
-    labels = c("test data - raw", "test data -\nspatially undersampled"))) + 
-  xlab("Training Data") + 
-  ylab("AUC\n(Cross-Validated)") + 
-  ggtitle(paste0("Random CV\nmodel resolution: ", analysis_resolution)) + 
-  scale_color_viridis_d(name = "Model", #option = "magma", 
-                        begin = 0.1, end = 0.8) + 
-  theme_bw() + 
-  theme(text = element_text(size = t_size))
+# ggplot(data = evals[evals$metric == "AUC" & 
+#                       as.character(evals$block_cv_range) == "random", ], 
+#        aes(x = factor(train_data, 
+#                       levels = c("raw", "spat_subsamp"), 
+#                       labels =  c("raw", "spatially\nundersampled")), 
+#            y = value, 
+#            color = factor(
+#              model, 
+#              levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf", 
+#                         "env_spat_ll_rf"), 
+#              labels = c("\nMonth +\nList Length\n", 
+#                         "\nLat + Lon +\nMonth +\nList Length\n",
+#                         "\nEnvironment +\nMonth +\nList Length\n", 
+#                         "\nEnvironment + \nLat + Long +\nMonth +\nList Length")))) + 
+#   geom_boxplot() + 
+#   facet_wrap(~species + factor(
+#     test_data, 
+#     levels = c("raw", "spat_subsamp"), 
+#     labels = c("test data - raw", "test data -\nspatially undersampled"))) + 
+#   xlab("Training Data") + 
+#   ylab("AUC\n(Cross-Validated)") + 
+#   ggtitle(paste0("Random CV\nmodel resolution: ", analysis_resolution)) + 
+#   scale_color_viridis_d(name = "Model", #option = "magma", 
+#                         begin = 0.1, end = 0.8) + 
+#   theme_bw() + 
+#   theme(text = element_text(size = t_size))
 ### end AUC ----------------------------------------------------------------
 
 

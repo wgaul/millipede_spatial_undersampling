@@ -12,7 +12,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 11 April 2022
-## last modified: 11 April 2022
+## last modified: 14 April 2022
 ##############################
 
 if(!dir.exists("./saved_objects")) dir.create("./saved_objects")
@@ -21,6 +21,20 @@ if(!dir.exists("./saved_objects")) dir.create("./saved_objects")
 mill_wide <- readRDS("mill_wide.rds")
 newdata <- readRDS("newdata.rds")
 fold_assignments <- readRDS("fold_assignments.rds")
+
+### get mean proportion of checklists that are detection lists for each species 
+## in the spatially undersampled data
+# I am hard-coding this right now to save time while working on reviews.  
+# I calculated these on 14 April 2022 from the results used for the initial
+# submission to the journal.
+# It would be possible (and better) to generate this in the script by getting 
+# the information from the fitted models objects.
+class_balance_df <- data.frame(
+  species = c("Macrosternodesmus palicola", "Boreoiulus tenuis",
+              "Ommatoiulus sabulosus", "Blaniulus guttulatus",
+              "Glomeris marginata", "Cylindroiulus punctatus"), 
+  mean_proportion_detections = c(0.219, 0.246, 0.260, 0.359, 0.486, 0.557))
+
 
 # keep only fold assignments for cross-validation sizes to run
 kp <- sapply(fold_assignments, FUN = function(x, cv_size) {
@@ -181,7 +195,7 @@ call_fit_rf_random_undersample <- function(fold_assignments, sp_name, test_fold,
   #           for each species
   #       random.under.sample - T/F indicating whether to perform random
   #           under sampling.
-browser()  
+
   # add CV fold assignments to sp_df
   if(class(fold_assignments) == "SpatialBlock") {
     sp_df <- st_join(
@@ -204,7 +218,7 @@ browser()
   # convert species record counts to p/a
   sp_df[colnames(sp_df) == sp_name] <- pa(sp_df[colnames(sp_df) == sp_name])
   sp_df_original <- sp_df
-  
+
   if(random.under.sample) {
     # sub-sample absence checklists to match the average class balance from
     # checklists in the spatially undersampled datasets for this species
@@ -246,19 +260,6 @@ browser()
          sp_df = sp_df, pred_names = pred_names, newdata = newdata, 
          sp_df_original = sp_df_original, mtry = mtry, pred_brick = pred_brick)
 }
-
-### get mean proportion of checklists that are detection lists for each species 
-## in the spatially undersampled data
-class_balance_df <- list.files("./saved_objects/")
-class_balance_df <- class_balance_df[grepl("evals.*", class_balance_df)]
-class_balance_df <- bind_rows(lapply(
-  class_balance_df, 
-  FUN = function(x) read.csv(paste0("./saved_objects/", x))))
-
-class_balance_df <- group_by(class_balance_df, species) %>%
-  filter(train_data == "spat_subsamp") %>%
-  summarise(mean_proportion_detections = mean(proportion_detections))
-
 
 
 #### Fit Random Forest -------------------------------------------------------

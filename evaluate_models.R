@@ -1002,105 +1002,105 @@ for(i in 1:length(sp_to_fit)) {
 }
 
 
-# trained with random undersampling
+## evaluate models trained with random undersampling
 for(i in 1:length(sp_to_fit)) {
-  fits <- readRDS(paste0("./saved_objects/", mod_name, "_randomSubSamp_fits_", 
-                         gsub(" ", "_", sp_to_fit[[i]]), analysis_resolution, 
+  fits <- readRDS(paste0("./saved_objects/", mod_name, "_randomSubSamp_fits_",
+                         gsub(" ", "_", sp_to_fit[[i]]), analysis_resolution,
                          ".rds"))
   sp_name <- names(sp_to_fit)[i]
-  
+
   ## test against raw data -----------------------------------------------
   aucs <- lapply(fits, FUN = function(x, sp_name) {
     auc_iter <- lapply(x, FUN = function(y, sp_name) {
       tryCatch({
         as.numeric(pROC::roc(
-          response = y$preds[y$preds$test_fold == T, 
-                             colnames(y$preds) == gsub(" ", ".", sp_name)], 
-          predictor = y$preds$pred[y$preds$test_fold == T])$auc)}, 
+          response = y$preds[y$preds$test_fold == T,
+                             colnames(y$preds) == gsub(" ", ".", sp_name)],
+          predictor = y$preds$pred[y$preds$test_fold == T])$auc)},
         error = function(x) NA)
     }, sp_name = sp_name)
   }, sp_name = sp_to_fit[[i]])
-  
+
   prop_dets <- lapply(fits, FUN = function(x) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
-  
+
   # put evaluation metrics for every fold into df
-  ev <- data.frame(species = sp_name, model = mod_name, 
-                   train_data = "random_subsamp", 
-                   test_data = "raw", metric = "AUC", 
-                   value = unlist(aucs), 
+  ev <- data.frame(species = sp_name, model = mod_name,
+                   train_data = "random_subsamp",
+                   test_data = "raw", metric = "AUC",
+                   value = unlist(aucs),
                    proportion_detections = unlist(prop_dets))
   evals <- bind_rows(evals, ev)
   rm(ev, n_det_nondet) # end AUC ---------------------------------
-  
+
   # Kappa ----------------------------------------------
   # get Kappa for each fold
   kp <- lapply(fits, function(x, sp_name, kappas) {
     kp_iter <- lapply(x, FUN = function(y, sp_name, kappas) {
       tryCatch({
-        k_res <- sapply(kappas, kappa_calc, 
-                        resp = y$preds[y$preds$test_fold == T, 
-                                       colnames(y$preds) == sp_name], 
+        k_res <- sapply(kappas, kappa_calc,
+                        resp = y$preds[y$preds$test_fold == T,
+                                       colnames(y$preds) == sp_name],
                         pred = y$preds$pred[y$preds$test_fold == T])
         # return kappa and threshold that maximised kappa
-        k_res[k_res == max(k_res)][1]}, 
+        k_res[k_res == max(k_res)][1]},
         error = function(x) NA)
     }, sp_name = sp_name, kappas = kappas)
   }, sp_name = gsub(" ", ".", sp_to_fit[[i]]), kappas = kappas)
-  
+
   prop_dets <- lapply(fits, FUN = function(x) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
- 
+
   # put evaluation metrics for every fold into df
-  ev <- data.frame(species = sp_name, model = mod_name, 
-                   train_data = "random_subsamp", 
-                   test_data = "raw", metric = "Kappa", 
-                   value = unlist(kp), 
+  ev <- data.frame(species = sp_name, model = mod_name,
+                   train_data = "random_subsamp",
+                   test_data = "raw", metric = "Kappa",
+                   value = unlist(kp),
                    proportion_detections = unlist(prop_dets))
   evals <- bind_rows(evals, ev)
   rm(ev) # end Kappa ----------------------------------
-  
+
   # sensitivity --------------------------------------------------
   sens <- mapply(FUN = function(x, thresh, sp_name) {
     sens_iter <- mapply(FUN = function(y, thresh, sp_name) {
       tryCatch({
-        sensitivity(threshold = thresh, 
-                    response = y$preds[y$preds$test_fold == T, 
-                                       colnames(y$preds) == gsub(" ", ".", 
-                                                                 sp_name)], 
-                    predictions = y$preds$pred[y$preds$test_fold == T])}, 
+        sensitivity(threshold = thresh,
+                    response = y$preds[y$preds$test_fold == T,
+                                       colnames(y$preds) == gsub(" ", ".",
+                                                                 sp_name)],
+                    predictions = y$preds$pred[y$preds$test_fold == T])},
         error = function(x) NA)
     }, x, thresh, MoreArgs = list(sp_name = sp_name))
   }, fits, kp, MoreArgs = list(sp_name = sp_to_fit[[i]]), SIMPLIFY = F)
-  
+
   prop_dets <- lapply(fits, FUN = function(x) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
- 
+
   # put evaluation metrics for every fold into df
-  ev <- data.frame(species = sp_name, model = mod_name, 
-                   train_data = "random_subsamp", 
-                   test_data = "raw", 
-                   metric = "sensitivity", 
-                   value = unlist(sens), 
+  ev <- data.frame(species = sp_name, model = mod_name,
+                   train_data = "random_subsamp",
+                   test_data = "raw",
+                   metric = "sensitivity",
+                   value = unlist(sens),
                    proportion_detections = unlist(prop_dets))
   evals <- bind_rows(evals, ev)
   rm(ev) # end sensitivity --------------------------------------
-  
+
   # specificity --------------------------------------------------
   specif <- mapply(FUN = function(x, thresh, sp_name) {
     specif_iter <- mapply(FUN = function(y, thresh, sp_name) {
       tryCatch({
-        specificity(threshold = thresh, 
-                    response = y$preds[y$preds$test_fold == T, 
-                                       colnames(y$preds) == gsub(" ", ".", 
-                                                                 sp_name)], 
-                    predictions = y$preds$pred[y$preds$test_fold == T])}, 
+        specificity(threshold = thresh,
+                    response = y$preds[y$preds$test_fold == T,
+                                       colnames(y$preds) == gsub(" ", ".",
+                                                                 sp_name)],
+                    predictions = y$preds$pred[y$preds$test_fold == T])},
         error = function(x) NA)
     }, x, thresh, MoreArgs = list(sp_name = sp_name))
   }, fits, kp, MoreArgs = list(sp_name = sp_to_fit[[i]]), SIMPLIFY = F)
@@ -1111,27 +1111,27 @@ for(i in 1:length(sp_to_fit)) {
     })})
 
   # put evaluation metrics for every fold into df
-  ev <- data.frame(species = sp_name, model = mod_name, 
-                   train_data = "random_subsamp", 
-                   test_data = "raw", 
-                   metric = "specificity", 
-                   value = unlist(specif), 
+  ev <- data.frame(species = sp_name, model = mod_name,
+                   train_data = "random_subsamp",
+                   test_data = "raw",
+                   metric = "specificity",
+                   value = unlist(specif),
                    proportion_detections = unlist(prop_dets))
   evals <- bind_rows(evals, ev)
   rm(ev) # end specificity --------------------------------------
-  
+
   # Brier score --------------------------------------------------------------
   brier <- lapply(fits, FUN = function(x, sp_name) {
     br_iter <- lapply(x, FUN = function(y, sp_name) {
       tryCatch({
         pr <- y$preds$pred[y$preds$test_fold == T] # predicted values
         # observed values
-        ob <- y$preds[y$preds$test_fold == T, 
+        ob <- y$preds[y$preds$test_fold == T,
                       colnames(y$preds) == gsub(" ", ".", sp_name)]
         # squared error
         sq_er <- (pr - ob)^2
         mean(sq_er) # return mean squared error (Brier score)
-      }, 
+      },
       error = function(x) NA)
     }, sp_name = sp_name)
   }, sp_name = sp_to_fit[[i]])
@@ -1140,53 +1140,53 @@ for(i in 1:length(sp_to_fit)) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
- 
+
   # put evaluation metrics for every fold into df
-  ev <- data.frame(species = sp_name, model = mod_name, 
-                   train_data = "random_subsamp", 
-                   test_data = "raw", metric = "Brier", 
-                   value = unlist(brier), 
+  ev <- data.frame(species = sp_name, model = mod_name,
+                   train_data = "random_subsamp",
+                   test_data = "raw", metric = "Brier",
+                   value = unlist(brier),
                    proportion_detections = unlist(prop_dets))
   evals <- bind_rows(evals, ev)
   rm(ev)
   # end Brier score -----------------------------------------------------------
   ## end test against raw data -------------------------------------------
-  
+
   ## test against spatially subsampled data -----------------------------------
   aucs <- lapply(fits, FUN = function(x, sp_name, test_points_ss) {
     auc_iter <- lapply(x, FUN = function(y, sp_name, test_points_ss) {
       # select test dataset to use for this test
-      test_data <- test_points_ss[[sample(1:length(test_points_ss), 
+      test_data <- test_points_ss[[sample(1:length(test_points_ss),
                                           size = 1)]]
 
-      # subset to spatially  subsampled test data points that are in the test 
+      # subset to spatially  subsampled test data points that are in the test
       # fold for this model
       test_data <- test_data[test_data$hectad %in% y$test_sites |
-                               test_data$hectad %in% 
+                               test_data$hectad %in%
                                y$preds$hectad[y$preds$test_fold == T], ]
       test_data <- left_join(test_data, y$preds) # join predictions to test data
-      # drop checklists not in the test fold (sometimes checlists in hectads 
-      # that are in "y$test_sites" or y$preds$test_fold == T are in different 
-      # CV folds b/c cv block boundary is within the hectad and checklists are 
-      # at finer spatial resolution, or because CV used randomly chosen 
-      # checklists, regardless of what hectad the were in.  E.g. with random 
-      # CV, if one checklist from a hectad is in the test fold and another is 
+      # drop checklists not in the test fold (sometimes checlists in hectads
+      # that are in "y$test_sites" or y$preds$test_fold == T are in different
+      # CV folds b/c cv block boundary is within the hectad and checklists are
+      # at finer spatial resolution, or because CV used randomly chosen
+      # checklists, regardless of what hectad the were in.  E.g. with random
+      # CV, if one checklist from a hectad is in the test fold and another is
       # not, the hectad will be in "y$preds$hectad[y$preds$test_fold == T]" and
       # so the training checklist will be included by the previous line of code,
       # but will now be dropped by this following line of code.)
-      test_data <- test_data[test_data$test_fold == T, ] 
+      test_data <- test_data[test_data$test_fold == T, ]
       n_dets_nondets <- tryCatch({
-        data.frame(table(test_data[, colnames(test_data) == gsub(" ", ".", 
-                                                                 sp_name)]))}, 
+        data.frame(table(test_data[, colnames(test_data) == gsub(" ", ".",
+                                                                 sp_name)]))},
         error = function(x) NA)
       auc <- tryCatch({
-        as.numeric(pROC::roc(response = test_data[, colnames(test_data) == 
-                                                    gsub(" ", ".", sp_name)], 
-                             predictor = test_data$pred)$auc)}, 
+        as.numeric(pROC::roc(response = test_data[, colnames(test_data) ==
+                                                    gsub(" ", ".", sp_name)],
+                             predictor = test_data$pred)$auc)},
         error = function(x) NA)
       list(auc = auc, n_dets_nondets = n_dets_nondets)
     }, sp_name = sp_name, test_points_ss = test_points_ss)
-  }, sp_name = sp_to_fit[[i]], 
+  }, sp_name = sp_to_fit[[i]],
   test_points_ss = test_points_ss[[i]])
 
   simps_trains_hec <- lapply(fits, FUN = function(x) {
@@ -1197,27 +1197,27 @@ for(i in 1:length(sp_to_fit)) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$simpson_training_subsampBlock}, error = function(x) NA)
     })})
-  
+
   prop_dets <- lapply(fits, FUN = function(x) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
 
   # put evaluation metrics for every fold into df
-  ev <- data.frame(species = sp_name, model = mod_name, 
-                   train_data = "random_subsamp", 
-                   test_data = "spat_subsamp", metric = "AUC", 
+  ev <- data.frame(species = sp_name, model = mod_name,
+                   train_data = "random_subsamp",
+                   test_data = "spat_subsamp", metric = "AUC",
                    value = unlist(lapply(aucs, FUN = function(x) {
-                     lapply(x, FUN = function (y) {y$auc})})), 
-                   simpson_training_hectad = unlist(simps_trains_hec), 
-                   proportion_detections = unlist(prop_dets), 
+                     lapply(x, FUN = function (y) {y$auc})})),
+                   simpson_training_hectad = unlist(simps_trains_hec),
+                   proportion_detections = unlist(prop_dets),
                    n_dets_in_test = unlist(lapply(aucs, FUN = function(x) {
                      lapply(x, FUN = function (y) {
                        if("1" %in% as.character(y$n_dets_nondets$Var1)) {
                          y$n_dets_nondets$Freq[y$n_dets_nondets$Var1 == "1"]
                        } else 0
                      })
-                   })), 
+                   })),
                    n_nondets_in_test = unlist(lapply(aucs, FUN = function(x) {
                      lapply(x, FUN = function (y) {
                        if("0" %in% as.character(y$n_dets_nondets$Var1)) {
@@ -1225,118 +1225,118 @@ for(i in 1:length(sp_to_fit)) {
                        } else 0})
                    })))
   evals <- bind_rows(evals, ev)
-  rm(ev, simps_trains_hec, simps_trains_blk) 
-  
+  rm(ev, simps_trains_hec, simps_trains_blk)
+
   # Kappa ------------------------------------
   # get kappa for each fold
   kp <- lapply(fits, function(x, sp_name, kappas, test_points_ss) {
     kp_iter <- lapply(x, FUN = function(y, sp_name, kappas, test_points_ss) {
       # select test dataset to use for this test
-      test_data <- test_points_ss[[sample(1:length(test_points_ss), 
+      test_data <- test_points_ss[[sample(1:length(test_points_ss),
                                           size = 1)]]
-      # subset to spatially  subsampled test data points that are in the test 
+      # subset to spatially  subsampled test data points that are in the test
       # fold for this model
       test_data <- test_data[test_data$hectad %in% y$test_sites |
-                               test_data$hectad %in% 
+                               test_data$hectad %in%
                                y$preds$hectad[y$preds$test_fold == T], ]
       test_data <- left_join(test_data, y$preds) # join predictions to test data
-      # drop checklists not in the test fold (sometimes checlists in hectads 
-      # that are in "y$test_sites" or y$preds$test_fold == T are actually in 
+      # drop checklists not in the test fold (sometimes checlists in hectads
+      # that are in "y$test_sites" or y$preds$test_fold == T are actually in
       # different CV folds.
       test_data <- test_data[test_data$test_fold == T, ]
       tryCatch({
-        k_res <- sapply(kappas, kappa_calc, 
-                        resp = test_data[, colnames(test_data) == sp_name], 
+        k_res <- sapply(kappas, kappa_calc,
+                        resp = test_data[, colnames(test_data) == sp_name],
                         pred = test_data$pred)
         # return kappa and threshold that maximised kappa
-        k_res[k_res == max(k_res)][1]}, 
+        k_res[k_res == max(k_res)][1]},
         error = function(x) NA)
     }, sp_name = sp_name, kappas = kappas, test_points_ss = test_points_ss)
-  }, sp_name = gsub(" ", ".", sp_to_fit[[i]]), kappas = kappas, 
+  }, sp_name = gsub(" ", ".", sp_to_fit[[i]]), kappas = kappas,
   test_points_ss = test_points_ss[[i]])
 
   prop_dets <- lapply(fits, FUN = function(x) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
- 
+
   # put evaluation metrics for every fold into df
-  ev <- data.frame(species = sp_name, model = mod_name, 
-                   train_data = "random_subsamp", 
-                   test_data = "spat_subsamp", metric = "Kappa", 
-                   value = unlist(kp), 
+  ev <- data.frame(species = sp_name, model = mod_name,
+                   train_data = "random_subsamp",
+                   test_data = "spat_subsamp", metric = "Kappa",
+                   value = unlist(kp),
                    proportion_detections = unlist(prop_dets))
   evals <- bind_rows(evals, ev)
   rm(ev) # end Kappa ----------------------------------
-  
+
   # sensitivity --------------------------------------------------
   sens <- mapply(FUN = function(x, thresh, sp_name, test_points_ss) {
     sens_iter <- mapply(FUN = function(y, thresh, sp_name, test_points_ss) {
       # select test dataset to use for this test
-      test_data <- test_points_ss[[sample(1:length(test_points_ss), 
+      test_data <- test_points_ss[[sample(1:length(test_points_ss),
                                           size = 1)]]
-      # subset to spatially  subsampled test data points that are in the test 
+      # subset to spatially  subsampled test data points that are in the test
       # fold for this model
       test_data <- test_data[test_data$hectad %in% y$test_sites |
-                               test_data$hectad %in% 
+                               test_data$hectad %in%
                                y$preds$hectad[y$preds$test_fold == T], ]
       test_data <- left_join(test_data, y$preds) # join predictions to test data
-      # drop checklists not in the test fold (sometimes checlists in hectads 
-      # that are in "y$test_sites" or y$preds$test_fold == T are actually in 
+      # drop checklists not in the test fold (sometimes checlists in hectads
+      # that are in "y$test_sites" or y$preds$test_fold == T are actually in
       # different CV folds.
       test_data <- test_data[test_data$test_fold == T, ]
       tryCatch({
-        sensitivity(threshold = thresh, 
-                    response = test_data[, colnames(test_data) == 
-                                           gsub(" ", ".", sp_name)], 
-                    predictions = test_data$pred)}, 
+        sensitivity(threshold = thresh,
+                    response = test_data[, colnames(test_data) ==
+                                           gsub(" ", ".", sp_name)],
+                    predictions = test_data$pred)},
         error = function(x) NA)
-    }, x, thresh, MoreArgs = list(sp_name = sp_name, 
+    }, x, thresh, MoreArgs = list(sp_name = sp_name,
                                   test_points_ss = test_points_ss))
-  }, fits, kp, 
-  MoreArgs = list(sp_name = sp_to_fit[[i]], 
+  }, fits, kp,
+  MoreArgs = list(sp_name = sp_to_fit[[i]],
                   test_points_ss = test_points_ss[[i]]), SIMPLIFY = F)
 
   prop_dets <- lapply(fits, FUN = function(x) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
-  
+
   # put evaluation metrics for every fold into df
-  ev <- data.frame(species = sp_name, model = mod_name, 
-                   train_data = "random_subsamp", 
-                   test_data = "spat_subsamp", 
-                   metric = "sensitivity", 
-                   value = unlist(sens), 
+  ev <- data.frame(species = sp_name, model = mod_name,
+                   train_data = "random_subsamp",
+                   test_data = "spat_subsamp",
+                   metric = "sensitivity",
+                   value = unlist(sens),
                    proportion_detections = unlist(prop_dets))
   evals <- bind_rows(evals, ev)
   rm(ev) # end sensitivity --------------------------------------
-  
+
   # specificity --------------------------------------------------
   specif <- mapply(FUN = function(x, thresh, sp_name, test_points_ss) {
     specif_iter <- mapply(FUN = function(y, thresh, sp_name, test_points_ss) {
       # select test dataset to use for this test
-      test_data <- test_points_ss[[sample(1:length(test_points_ss), 
+      test_data <- test_points_ss[[sample(1:length(test_points_ss),
                                           size = 1)]]
-      # subset to spatially  subsampled test data points that are in the test 
+      # subset to spatially  subsampled test data points that are in the test
       # fold for this model
       test_data <- test_data[test_data$hectad %in% y$test_sites |
-                               test_data$hectad %in% 
+                               test_data$hectad %in%
                                y$preds$hectad[y$preds$test_fold == T], ]
       test_data <- left_join(test_data, y$preds) # join predictions to test data
-      # drop checklists not in the test fold (sometimes checlists in hectads 
-      # that are in "y$test_sites" or y$preds$test_fold == T are actually in 
+      # drop checklists not in the test fold (sometimes checlists in hectads
+      # that are in "y$test_sites" or y$preds$test_fold == T are actually in
       # different CV folds.
       test_data <- test_data[test_data$test_fold == T, ]
       tryCatch({
-        specificity(threshold = thresh, 
-                    response = test_data[, colnames(test_data) == 
-                                           gsub(" ", ".", sp_name)], 
-                    predictions = test_data$pred)}, 
+        specificity(threshold = thresh,
+                    response = test_data[, colnames(test_data) ==
+                                           gsub(" ", ".", sp_name)],
+                    predictions = test_data$pred)},
         error = function(x) NA)
-    }, x, thresh, MoreArgs = list(sp_name = sp_name, 
+    }, x, thresh, MoreArgs = list(sp_name = sp_name,
                                   test_points_ss = test_points_ss))
-  }, fits, kp, MoreArgs = list(sp_name = sp_to_fit[[i]], 
+  }, fits, kp, MoreArgs = list(sp_name = sp_to_fit[[i]],
                                test_points_ss = test_points_ss[[i]]),
   SIMPLIFY = F)
 
@@ -1344,42 +1344,42 @@ for(i in 1:length(sp_to_fit)) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
-  
+
   # put evaluation metrics for every fold into df
-  ev <- data.frame(species = sp_name, model = mod_name, 
-                   train_data = "random_subsamp", 
-                   test_data = "spat_subsamp", 
-                   metric = "specificity", 
-                   value = unlist(specif), 
+  ev <- data.frame(species = sp_name, model = mod_name,
+                   train_data = "random_subsamp",
+                   test_data = "spat_subsamp",
+                   metric = "specificity",
+                   value = unlist(specif),
                    proportion_detections = unlist(prop_dets))
   evals <- bind_rows(evals, ev)
   rm(ev) # end specificity --------------------------------------
-  
+
   # Brier score --------------------------------------------------------------
   brier <- lapply(fits, FUN = function(x, sp_name, test_points_ss) {
     br_iter <- lapply(x, FUN = function(y, sp_name, test_points_ss) {
       tryCatch({
         # select test dataset to use for this test
-        test_data <- test_points_ss[[sample(1:length(test_points_ss), 
+        test_data <- test_points_ss[[sample(1:length(test_points_ss),
                                             size = 1)]]
-        # subset to spatially  subsampled test data points that are in the test 
+        # subset to spatially  subsampled test data points that are in the test
         # fold for this model
         test_data <- test_data[test_data$hectad %in% y$test_sites |
-                                 test_data$hectad %in% 
+                                 test_data$hectad %in%
                                  y$preds$hectad[y$preds$test_fold == T], ]
         test_data <- left_join(test_data, y$preds) # join predictions to test data
-        # drop checklists not in the test fold (sometimes checlists in hectads 
-        # that are in "y$test_sites" or y$preds$test_fold == T are in different 
-        # CV folds b/c cv block boundary is within the hectad and checklists are 
-        # at finer spatial resolution, or because CV used randomly chosen 
-        # checklists, regardless of what hectad the were in. 
-        test_data <- test_data[test_data$test_fold == T, ] 
+        # drop checklists not in the test fold (sometimes checlists in hectads
+        # that are in "y$test_sites" or y$preds$test_fold == T are in different
+        # CV folds b/c cv block boundary is within the hectad and checklists are
+        # at finer spatial resolution, or because CV used randomly chosen
+        # checklists, regardless of what hectad the were in.
+        test_data <- test_data[test_data$test_fold == T, ]
         pr <- test_data$pred # predicted values
         # observed values
         ob <- test_data[, colnames(test_data) == gsub(" ", ".", sp_name)]
         sq_er <- (pr - ob)^2 # squared error
         mean(sq_er) # return mean squared error (Brier score)
-      }, 
+      },
       error = function(x) NA)
     }, sp_name = sp_name, test_points_ss = test_points_ss)
   }, sp_name = sp_to_fit[[i]], test_points_ss = test_points_ss[[i]])
@@ -1388,12 +1388,12 @@ for(i in 1:length(sp_to_fit)) {
     range_iter <- lapply(x, FUN = function(y) {
       tryCatch({y$proportion_detections}, error = function(x) NA)
     })})
- 
+
   # put evaluation metrics for every fold into df
-  ev <- data.frame(species = sp_name, model = mod_name, 
-                   train_data = "random_subsamp", 
-                   test_data = "spat_subsamp", metric = "Brier", 
-                   value = unlist(brier), 
+  ev <- data.frame(species = sp_name, model = mod_name,
+                   train_data = "random_subsamp",
+                   test_data = "spat_subsamp", metric = "Brier",
+                   value = unlist(brier),
                    proportion_detections = unlist(prop_dets))
   evals <- bind_rows(evals, ev)
   # end Brier score -----------------------------------------------------------

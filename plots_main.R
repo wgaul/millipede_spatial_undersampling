@@ -207,50 +207,53 @@ auc_summary <- group_by(auc_summary, species, model, train_data) %>%
   summarise(mean_auc = mean(value)) %>%
   pivot_wider(names_from = train_data, values_from = mean_auc) %>%
   mutate(change_after_random_subsampling = random_subsamp - raw, 
-         change_spat_minus_random_subsampling = spat_subsamp - random_subsamp)
+         change_spat_minus_random_subsampling = spat_subsamp - random_subsamp, 
+         change_spat_subsamp_minus_raw = spat_subsamp - raw)
 
 auc_summary <- left_join(auc_summary, n_detections_per_species_1km, 
                          by = "species")
 
 ## these graphs used old column names, when I was calculating difference
 ## between raw and spatially undersampled data first.  Changed 13 April 2022
-# auc_means_plot <- ggplot(
-#   data = auc_summary, 
-#   aes(
-#     x = as.numeric(as.character(proportion_detections)), 
-#     y = change_after_subsampling, 
-#     color = factor(
-#       model, 
-#       levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf", 
-#                  "env_spat_ll_rf"), 
-#       labels = c("\nseason +\nlist length\n", 
-#                  "\ncoordinates +\nseason +\nlist length\n",
-#                  "\nenvironment +\nseason +\nlist length\n", 
-#                  "\nenvironment + \ncoordinates +\nseason +\nlist length")), 
-#     shape = factor(
-#       model, 
-#       levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf", 
-#                  "env_spat_ll_rf"), 
-#       labels = c("\nseason +\nlist length\n", 
-#                  "\ncoordinates +\nseason +\nlist length\n",
-#                  "\nenvironment +\nseason +\nlist length\n", 
-#                  "\nenvironment + \ncoordinates +\nseason +\nlist length")))) + 
-#   geom_point(size = t_size/4) + 
-#   ylim(min(c(auc_summary$change_after_subsampling, 
-#              auc_summary$change_spat_vs_random_subsampling), na.rm = T), 
-#        max(c(auc_summary$change_after_subsampling, 
-#              auc_summary$change_spat_vs_random_subsampling), na.rm = T)) + 
-#   xlab("Species prevalence\nin raw data") + 
-#   ylab("Change in mean AUC") + 
-#   scale_color_viridis_d(name = "Model", #option = "magma", 
-#                         begin = 0.1, end = 0.8, direction = -1) + 
-#   scale_shape(name = "Model") + 
-#   geom_abline(slope = 0, intercept = 0, linetype = "dashed") + 
-#   theme_bw() + 
-#   theme(text = element_text(size = t_size), 
-#         axis.text.x = element_text(angle = 55, hjust = 1, vjust = 1))
-# auc_means_plot
-# 
+auc_means_plot <- ggplot(
+  data = auc_summary,
+  aes(
+    x = as.numeric(as.character(proportion_detections)),
+    y = change_spat_subsamp_minus_raw,
+    color = factor(
+      model,
+      levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf",
+                 "env_spat_ll_rf"),
+      labels = c("\nseason +\nlist length\n",
+                 "\ncoordinates +\nseason +\nlist length\n",
+                 "\nenvironment +\nseason +\nlist length\n",
+                 "\nenvironment + \ncoordinates +\nseason +\nlist length")),
+    shape = factor(
+      model,
+      levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf",
+                 "env_spat_ll_rf"),
+      labels = c("\nseason +\nlist length\n",
+                 "\ncoordinates +\nseason +\nlist length\n",
+                 "\nenvironment +\nseason +\nlist length\n",
+                 "\nenvironment + \ncoordinates +\nseason +\nlist length")))) +
+  geom_point(size = t_size/4) +
+  ylim(min(c(auc_summary$change_spat_subsamp_minus_raw,
+             auc_summary$change_spat_minus_random_subsampling, 
+             auc_summary$change_after_random_subsampling), na.rm = T),
+       max(c(auc_summary$change_spat_subsamp_minus_raw,
+             auc_summary$change_spat_minus_random_subsampling, 
+             auc_summary$change_after_random_subsampling), na.rm = T)) +
+  xlab("Species prevalence\nin raw data") +
+  ylab("Change in mean AUC") +
+  scale_color_viridis_d(name = "Model", #option = "magma",
+                        begin = 0.1, end = 0.8, direction = -1) +
+  scale_shape(name = "Model") +
+  geom_abline(slope = 0, intercept = 0, linetype = "dashed") +
+  theme_bw() +
+  theme(text = element_text(size = t_size),
+        axis.text.x = element_text(angle = 55, hjust = 1, vjust = 1))
+auc_means_plot
+
 # ## plot difference between spatial and random undersampling
 # auc_change_spat_random_plot <- ggplot(
 #   data = auc_summary, 
@@ -340,7 +343,7 @@ auc_change_facet_plot
 # see earlier comment about only using random cv
 if(length(which(!is.na(unique(evals$block_cv_range)))) != 1) {
   stop("Graphs should use only random CV results.  Check evals data frame.")}
-stop("Here 13 Apr.  Need env_spat_ll_rf model.")
+
 evals_median_best <- filter(evals, model == "env_spat_ll_rf" & 
                               test_data == "spat_subsamp") %>%
   select(species, train_data, metric, value) %>%
@@ -373,7 +376,7 @@ performance_best_mod_plot <- ggplot(
   scale_color_viridis_d(begin = 0, end = 0.8) + 
   theme_bw() + 
   theme(text = element_text(size = 0.9*t_size), 
-        legend.position = c(0.84, 0.08), legend.title = element_blank(), 
+        legend.position = c(0.84, 0), legend.title = element_blank(), 
         legend.key.size = unit(2*t_size, "points"), 
         legend.text = element_text(size = 0.7*t_size))
 performance_best_mod_plot
@@ -894,21 +897,23 @@ length(unique(mill_temp$checklist_ID[
 ggsave("Fig1.jpg", map_Osab_raw + map_Osab_spat_subsamp, 
        width = 15, height = 15/1.5, units = "cm", 
        device = "jpg")
-ggsave("Fig2.jpg", auc_change_facet_plot, 
+ggsave("Fig2.jpg", auc_means_plot, 
+       width = 20, height = 20, units = "cm", device = "jpg")
+ggsave("Fig3.jpg", auc_change_facet_plot, 
        width = 25, height = 20, units = "cm", device = "jpg")
-ggsave("Fig3.jpg", auc_all_models_plot + 
+ggsave("Fig4.jpg", auc_all_models_plot + 
          theme(text = element_text(size = t_size), 
                axis.text.x = element_text(angle = 40, hjust = 1, vjust = 1)), 
        width = 25, height = 20, units = "cm",
        device = "jpg")
-ggsave("Fig4.jpg", performance_best_mod_plot + 
+ggsave("Fig5.jpg", performance_best_mod_plot + 
          theme(text = element_text(size = t_size), 
                axis.text.x = element_text(angle = 38, hjust = 1, vjust = 1)), 
        width = 25, height = 20, 
        units = "cm", device = "jpg")
-ggsave("Fig5.jpg", wrap_plots(osab_pd_plots, ncol = 3), 
+ggsave("Fig6.jpg", wrap_plots(osab_pd_plots, ncol = 3), 
        width = 20, height = 20, units = "cm", device = "jpg")
-ggsave("Fig6.jpg", osab_maps[[2]] + ylab("Latitude") + ggtitle("(a)") + 
+ggsave("Fig7.jpg", osab_maps[[2]] + ylab("Latitude") + ggtitle("(a)") + 
          geom_segment(data = annot[1, ], aes(x = x1, xend = x2, y = y1, yend = y2)) + 
          geom_text(data = annot[c(2, 4), ], aes(x = x1, y = y1, label = label), 
                    size = 0.2*t_size) + 

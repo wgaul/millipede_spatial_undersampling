@@ -23,6 +23,110 @@ t_size <- 20
 
 library(GGally)
 
+### AUC difference plots when testing on raw data ------------------------------
+# calculate mean and se of mean for AUC
+auc_summary_raw_test <- evals[evals$metric == "AUC" & 
+                       as.character(evals$test_data) == "raw", ]
+auc_summary_raw_test <- group_by(auc_summary_raw_test, species, model, train_data) %>%
+  summarise(mean_auc = mean(value)) %>%
+  pivot_wider(names_from = train_data, values_from = mean_auc) %>%
+  mutate(change_after_random_subsampling = random_subsamp - raw, 
+         change_spat_minus_random_subsampling = spat_subsamp - random_subsamp, 
+         change_spat_subsamp_minus_raw = spat_subsamp - raw)
+
+auc_summary_raw_test <- left_join(auc_summary_raw_test, n_detections_per_species_1km, 
+                         by = "species")
+
+## these graphs used old column names, when I was calculating difference
+## between raw and spatially undersampled data first.  Changed 13 April 2022
+auc_means_plot_raw <- ggplot(
+  data = auc_summary_raw_test,
+  aes(
+    x = as.numeric(as.character(proportion_detections)),
+    y = change_spat_subsamp_minus_raw,
+    color = factor(
+      model,
+      levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf",
+                 "env_spat_ll_rf"),
+      labels = c("\nseason +\nlist length\n",
+                 "\ncoordinates +\nseason +\nlist length\n",
+                 "\nenvironment +\nseason +\nlist length\n",
+                 "\nenvironment + \ncoordinates +\nseason +\nlist length")),
+    shape = factor(
+      model,
+      levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf",
+                 "env_spat_ll_rf"),
+      labels = c("\nseason +\nlist length\n",
+                 "\ncoordinates +\nseason +\nlist length\n",
+                 "\nenvironment +\nseason +\nlist length\n",
+                 "\nenvironment + \ncoordinates +\nseason +\nlist length")))) +
+  geom_point(size = t_size/4) +
+  ylim(min(c(auc_summary_raw_test$change_spat_subsamp_minus_raw,
+             auc_summary_raw_test$change_spat_minus_random_subsampling, 
+             auc_summary_raw_test$change_after_random_subsampling), na.rm = T),
+       max(c(auc_summary_raw_test$change_spat_subsamp_minus_raw,
+             auc_summary_raw_test$change_spat_minus_random_subsampling, 
+             auc_summary_raw_test$change_after_random_subsampling), na.rm = T)) +
+  xlab("Species prevalence\nin raw data") +
+  ylab("Change in mean AUC") +
+  scale_color_viridis_d(name = "Model", #option = "magma",
+                        begin = 0.1, end = 0.8, direction = -1) +
+  scale_shape(name = "Model") +
+  geom_abline(slope = 0, intercept = 0, linetype = "dashed") +
+  theme_bw() +
+  ggtitle("Test on raw data") +
+  theme(text = element_text(size = t_size),
+        axis.text.x = element_text(angle = 55, hjust = 1, vjust = 1))
+auc_means_plot_raw
+
+
+## alternatively, put those two into the same graph
+auc_summary_long_raw <- pivot_longer(
+  auc_summary_raw_test, 
+  cols = c("change_after_random_subsampling", 
+           "change_spat_minus_random_subsampling"), 
+  names_to = "difference")
+
+auc_change_facet_plot_raw <- ggplot(
+  data = auc_summary_long_raw, 
+  aes(x = as.numeric(as.character(proportion_detections)), 
+      y = value, 
+      color = factor(
+        model, 
+        levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf", 
+                   "env_spat_ll_rf"), 
+        labels = c("\nseason +\nlist length\n", 
+                   "\ncoordinates +\nseason +\nlist length\n",
+                   "\nenvironment +\nseason +\nlist length\n", 
+                   "\nenvironment + \ncoordinates +\nseason +\nlist length")), 
+      shape = factor(
+        model, 
+        levels = c("month_ll_rf", "spat_ll_rf","env_ll_rf", 
+                   "env_spat_ll_rf"), 
+        labels = c("\nseason +\nlist length\n", 
+                   "\ncoordinates +\nseason +\nlist length\n",
+                   "\nenvironment +\nseason +\nlist length\n", 
+                   "\nenvironment + \ncoordinates +\nseason +\nlist length")))) + 
+  geom_point(size = t_size/4) + 
+  facet_wrap(~ factor(difference, 
+                      levels = c("change_after_random_subsampling", 
+                                 "change_spat_minus_random_subsampling"), 
+                      labels = c("(a)", "(b)"))) + 
+  xlab("Species prevalence\nin raw data") + 
+  ylab("Change in mean AUC") + 
+  scale_color_viridis_d(name = "Model", #option = "magma", 
+                        begin = 0.1, end = 0.8, direction = -1) + 
+  scale_shape(name = "Model") + 
+  geom_abline(slope = 0, intercept = 0, linetype = "dashed") + 
+  theme_bw() + 
+  ggtitle("Test on raw data") +
+  theme(text = element_text(size = t_size), 
+        axis.text.x = element_text(angle = 55, hjust = 1, vjust = 1))
+auc_change_facet_plot_raw
+### end AUC difference plots testing on raw data ------------------------------
+
+
+
 ## predictor variable correlations ------------------------------------------
 # make sure predictor variables are in the order I specify in the colnames 
 # argument to ggpairs

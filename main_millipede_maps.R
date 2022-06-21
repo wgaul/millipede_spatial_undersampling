@@ -54,7 +54,7 @@ library(randomForest)
 
 source("functions_maps_of_ignorance.R")
 
-n_cores <- 2
+n_cores <- 1
 
 # select species to fit models to
 sp_to_fit <- list("Macrosternodesmus palicola", "Boreoiulus tenuis",

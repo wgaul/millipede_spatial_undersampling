@@ -3,6 +3,9 @@
 ## Willson Gaul	willson.gaul@ucdconnect.ie
 #####
 
+[![DOI](https://zenodo.org/badge/389782845.svg)](https://zenodo.org/badge/latestdoi/389782845)
+
+
 This repository contains code to run the analyses for a study of using spatial under-sampling to model distributions of Irish millipedes.  
 
 To run the entire work flow, run the script "main_millipede_maps.R".  

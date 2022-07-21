@@ -9,7 +9,7 @@
 ##
 ## author: Willson Gaul willson.gaul@ucdconnect.ie
 ## created: 13 May 2020
-## last modified: 13 April 2022
+## last modified: 21 July 2022
 ##############################
 library(patchwork)
 library(ggh4x)
@@ -936,5 +936,38 @@ ggsave("auc_all_models_slideshow.jpg", auc_all_models_presentation,
 ## save as eps
 ggsave("Figure 1.eps", spat_evenness_boxplot, width = 25, height = 25, 
        units = "cm", device = "eps")
+
+ggsave("Figure 1.eps", map_Osab_raw + map_Osab_spat_subsamp, 
+       width = 15, height = 15/1.5, units = "cm", dpi = 300, 
+       device = "eps")
+ggsave("Figure 2.eps", auc_means_plot, 
+       width = 20, height = 20, units = "cm", dpi = 300, device = "eps")
+ggsave("Figure 3.eps", auc_change_facet_plot, 
+       width = 25, height = 20, units = "cm", dpi = 300, device = "eps")
+ggsave("Figure 4.eps", auc_all_models_plot + 
+         theme(text = element_text(size = t_size), 
+               axis.text.x = element_text(angle = 40, hjust = 1, vjust = 1)), 
+       width = 25, height = 20, units = "cm", dpi = 300, device = "eps")
+ggsave("Figure 5.eps", performance_best_mod_plot + 
+         theme(text = element_text(size = t_size), 
+               axis.text.x = element_text(angle = 38, hjust = 1, vjust = 1)), 
+       width = 25, height = 20, units = "cm", dpi = 300, device = "eps")
+ggsave("Figure 6.eps", wrap_plots(osab_pd_plots, ncol = 3), 
+       width = 20, height = 20, units = "cm", dpi = 300, device = "eps")
+ggsave("Figure 7.eps", osab_maps[[2]] + ylab("Latitude") + ggtitle("(a)") + 
+         geom_segment(data = annot[1, ], aes(x = x1, xend = x2, y = y1, yend = y2)) + 
+         geom_text(data = annot[c(2, 4), ], aes(x = x1, y = y1, label = label), 
+                   size = 0.2*t_size) + 
+         geom_segment(data = annot[3, ], aes(x = x1, xend = x2, y = y1, yend = y2), 
+                      arrow = arrow(length = unit(0.1, "npc"))) + 
+         theme(text = element_text(size = 0.8*t_size)) +
+         osab_maps[[3]] + ggtitle("(b)") +  
+         theme(text = element_text(size = 0.8*t_size)) +
+         osab_maps[[4]] + ggtitle("(c)") + 
+         theme(text = element_text(size = 0.8*t_size)) +
+         osab_maps[[5]] + ggtitle("(d)") + 
+         theme(text = element_text(size = 0.8*t_size)) + 
+         plot_layout(ncol = 2), 
+       width = 18, height = 18, units = "cm", dpi = 300, device = "eps")
 
 ### end save plots ------------------------------------------------------------

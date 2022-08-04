@@ -135,7 +135,7 @@ auc_all_models_plot <- ggplot(
   aes(
     x = factor(train_data, 
                levels = c("raw", "random_subsamp", "spat_subsamp"), 
-               labels =  c("raw",  "randomly\nunder-sampled", 
+               labels =  c("raw",  "unstratified\nunder-sampled", 
                            "spatially\nunder-sampled")), 
     y = value, 
     color = factor(
@@ -359,7 +359,7 @@ performance_best_mod_plot <- ggplot(
   data = evals_median_best, 
   aes(x = factor(train_data, 
                  levels = c("raw", "random_subsamp", "spat_subsamp"), 
-                 labels =  c("raw", "randomly\nundersampled", 
+                 labels =  c("raw", "unstratified\nundersampled", 
                              "spatially\nundersampled")), 
       y = median, 
       group = factor(species))) + 
